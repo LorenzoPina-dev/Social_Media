@@ -3,7 +3,7 @@
  * Token generation and verification
  */
 
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { config } from '../config';
 import { TokenPayload, TokenPair, DecodedToken, UnauthorizedError } from '../types';
 import { logger } from '../utils/logger';
@@ -17,7 +17,7 @@ export class JWTService {
     const refresh_token = this.generateRefreshToken(payload);
 
     // Parse expiry time
-    const expiresIn = this.parseExpiryTime(config.JWT.ACCESS_EXPIRY);
+    const expiresIn = this.parseExpiryTime(config.JWT.ACCESS_EXPIRY?.toString() ?? "15m") ;
 
     return {
       access_token,
@@ -30,22 +30,25 @@ export class JWTService {
    * Generate access token
    */
   private generateAccessToken(payload: TokenPayload): string {
-    return jwt.sign(payload, config.JWT.ACCESS_SECRET, {
+     const options: SignOptions = {
       expiresIn: config.JWT.ACCESS_EXPIRY,
       issuer: config.JWT.ISSUER,
       algorithm: 'HS256',
-    });
+    };
+
+  return jwt.sign(payload, config.JWT.ACCESS_SECRET as jwt.Secret, options);
   }
 
   /**
    * Generate refresh token
    */
   private generateRefreshToken(payload: TokenPayload): string {
-    return jwt.sign(payload, config.JWT.REFRESH_SECRET, {
+    const options: SignOptions = {
       expiresIn: config.JWT.REFRESH_EXPIRY,
       issuer: config.JWT.ISSUER,
       algorithm: 'HS256',
-    });
+    };
+    return jwt.sign(payload, config.JWT.REFRESH_SECRET as jwt.Secret, options);
   }
 
   /**

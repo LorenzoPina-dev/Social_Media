@@ -5,7 +5,6 @@
  * 
  * @module auth-service
  */
-
 import 'express-async-errors';
 import express, { Application } from 'express';
 import cors from 'cors';
@@ -73,18 +72,25 @@ async function bootstrap(): Promise<void> {
 
     // Connect to infrastructure
     logger.info('📦 Connecting to infrastructure...');
+    
+    // Connect to critical infrastructure (Database and Redis)
     await Promise.all([
       connectDatabase(),
       connectRedis(),
-      connectKafka(),
     ]);
+    
+    // Connect to Kafka (non-blocking, service can run without it)
+    connectKafka().catch(error => {
+      logger.warn('⚠️  Kafka connection failed, continuing without Kafka', { error });
+    });
+    
     logger.info('✅ Infrastructure connected successfully');
 
     // Setup routes
     setupRoutes(app);
 
     // Health checks
-    app.get('/health', (req, res) => {
+    app.get('/health', (_, res) => {
       res.json({
         status: 'healthy',
         service: 'auth-service',
@@ -93,23 +99,33 @@ async function bootstrap(): Promise<void> {
       });
     });
 
-    app.get('/health/ready', async (req, res) => {
+    app.get('/health/ready', async (_, res) => {
       try {
         const { getDatabase } = await import('./config/database');
         const { getRedisClient } = await import('./config/redis');
+        const { getKafkaProducer } = await import('./config/kafka');
         
         const db = getDatabase();
         const redis = getRedisClient();
 
+        // Check critical services
         await db.raw('SELECT 1');
         await redis.ping();
+
+        // Check Kafka (non-critical)
+        let kafkaStatus = 'ok';
+        try {
+          getKafkaProducer();
+        } catch (error) {
+          kafkaStatus = 'unavailable';
+        }
 
         res.json({
           status: 'ready',
           checks: {
             database: 'ok',
             redis: 'ok',
-            kafka: 'ok',
+            kafka: kafkaStatus,
           },
           timestamp: new Date().toISOString(),
         });

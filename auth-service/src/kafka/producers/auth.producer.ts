@@ -30,7 +30,10 @@ export class AuthProducer {
 
       logger.debug('Auth event published', { eventType: event.type, userId: event.userId });
     } catch (error) {
-      logger.error('Failed to publish auth event', { error, event });
+      logger.warn('Failed to publish auth event (Kafka may not be available)', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        eventType: event.type 
+      });
       // Don't throw - we don't want to fail the request if Kafka is down
     }
   }
@@ -38,28 +41,28 @@ export class AuthProducer {
   /**
    * Publish user authenticated event
    */
-  async publishUserAuthenticated(event: Extract<AuthEvent,  { type: 'user_authenticated' }>): Promise<void> {
+  async publishUserAuthenticated(event: Extract<AuthEvent, { type: 'user_authenticated' }> ): Promise<void> {
     await this.publishEvent(event);
   }
 
   /**
    * Publish user registered event
    */
-  async publishUserRegistered(event: Extract<AuthEvent,  { type: 'user_registered' }>): Promise<void> {
+  async publishUserRegistered(event: Extract<AuthEvent, { type: 'user_registered' }>  ): Promise<void> {
     await this.publishEvent(event);
   }
 
   /**
    * Publish password changed event
    */
-  async publishPasswordChanged(event: Extract<AuthEvent, { type: 'password_changed' }>): Promise<void> {
+  async publishPasswordChanged(event: Extract<AuthEvent, { type: 'password_changed' }> ): Promise<void> {
     await this.publishEvent(event);
   }
 
   /**
    * Publish MFA enabled event
    */
-  async publishMFAEnabled(event: Extract<AuthEvent, { type: 'mfa_enabled' }>): Promise<void> {
+  async publishMFAEnabled(event: Extract<AuthEvent, { type: 'mfa_enabled' }> ): Promise<void> {
     await this.publishEvent(event);
   }
 

@@ -5,6 +5,7 @@
  */
 
 import dotenv from 'dotenv';
+import { SignOptions } from 'jsonwebtoken';
 import path from 'path';
 
 dotenv.config({ path: path.join(__dirname, '../../.env') });
@@ -62,8 +63,8 @@ export const config = {
   JWT: {
     ACCESS_SECRET: process.env.JWT_ACCESS_SECRET!,
     REFRESH_SECRET: process.env.JWT_REFRESH_SECRET!,
-    ACCESS_EXPIRY: process.env.JWT_ACCESS_EXPIRY || '15m',
-    REFRESH_EXPIRY: process.env.JWT_REFRESH_EXPIRY || '30d',
+    ACCESS_EXPIRY: (process.env.JWT_ACCESS_EXPIRY || '15m') as SignOptions['expiresIn'],
+    REFRESH_EXPIRY: (process.env.JWT_REFRESH_EXPIRY || '30d') as SignOptions['expiresIn'],
     ALGORITHM: 'RS256' as const,
     ISSUER: 'auth-service',
   },

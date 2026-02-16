@@ -7,7 +7,7 @@ import { Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
 import { logger } from '../utils/logger';
 import { metrics } from '../utils/metrics';
-import { AuthenticatedRequest, CreateUserDto, LoginDto } from '../types';
+import { CreateUserDto, LoginDto } from '../types';
 
 export class AuthController {
   constructor(private authService: AuthService) {}
@@ -68,6 +68,7 @@ export class AuthController {
         data: {
           user: sanitizedUser,
           tokens: result.tokens,
+          mfa_required: result.mfa_required,
         },
       });
 
@@ -139,8 +140,9 @@ export class AuthController {
   /**
    * Logout from all devices
    * POST /api/v1/auth/logout-all
+   * Requires authentication
    */
-  async logoutAll(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async logoutAll(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user?.id;
 

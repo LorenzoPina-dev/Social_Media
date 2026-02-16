@@ -15,7 +15,7 @@ export function errorHandler(
   error: Error,
   req: Request,
   res: Response,
-  next: NextFunction
+  _: NextFunction
 ): void {
   // Log error
   logger.error('Request error', {

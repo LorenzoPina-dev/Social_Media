@@ -31,7 +31,7 @@ export async function requireAuth(
     // Verify token
     const decoded = await jwtService.verifyAccessToken(token);
 
-    // Attach user to request
+    // Attach user to request (req.user is extended via express.d.ts)
     req.user = {
       id: decoded.userId,
       username: decoded.username,
@@ -64,7 +64,7 @@ export async function requireAuth(
  */
 export async function optionalAuth(
   req: Request,
-  res: Response,
+  _: Response,
   next: NextFunction
 ): Promise<void> {
   try {
@@ -74,6 +74,7 @@ export async function optionalAuth(
       const token = authHeader.substring(7);
       const decoded = await jwtService.verifyAccessToken(token);
       
+      // Attach user to request (req.user is extended via express.d.ts)
       req.user = {
         id: decoded.userId,
         username: decoded.username,

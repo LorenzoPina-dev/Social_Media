@@ -15,6 +15,7 @@ export class MFAController {
   /**
    * Setup MFA (generate secret and QR code)
    * POST /api/v1/mfa/setup
+   * Requires authentication
    */
   async setupMFA(req: Request, res: Response): Promise<void> {
     const startTime = Date.now();
@@ -55,6 +56,7 @@ export class MFAController {
   /**
    * Verify MFA code and enable MFA
    * POST /api/v1/mfa/verify
+   * Requires authentication
    */
   async verifyMFA(req: Request, res: Response): Promise<void> {
     try {
@@ -92,6 +94,7 @@ export class MFAController {
   /**
    * Disable MFA
    * POST /api/v1/mfa/disable
+   * Requires authentication
    */
   async disableMFA(req: Request, res: Response): Promise<void> {
     try {
@@ -134,6 +137,7 @@ export class MFAController {
   /**
    * Regenerate backup codes
    * POST /api/v1/mfa/regenerate-codes
+   * Requires authentication
    */
   async regenerateBackupCodes(req: Request, res: Response): Promise<void> {
     try {
@@ -179,6 +183,7 @@ export class MFAController {
   /**
    * Get MFA status
    * GET /api/v1/mfa/status
+   * Requires authentication
    */
   async getMFAStatus(req: Request, res: Response): Promise<void> {
     try {

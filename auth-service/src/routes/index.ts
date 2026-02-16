@@ -58,7 +58,7 @@ export function setupRoutes(app: Application): void {
   app.use('/api/v1/mfa', setupMFARoutes(mfaController));
 
   // 404 handler
-  app.use('*', (req, res) => {
+  app.use('*', (_, res) => {
     res.status(404).json({
       success: false,
       error: 'Route not found',

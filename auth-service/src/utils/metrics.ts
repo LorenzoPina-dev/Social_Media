@@ -72,7 +72,7 @@ class Metrics {
    * Record HTTP request duration
    */
   recordRequestDuration(
-    operation: string,
+    _: string,
     duration: number,
     labels: { method?: string; path?: string; statusCode?: string } = {}
   ): void {
@@ -154,7 +154,7 @@ export const metrics = new Metrics();
 export function startMetricsServer(): void {
   const app = express();
 
-  app.get(config.METRICS.PATH, async (req, res) => {
+  app.get(config.METRICS.PATH, async (_, res) => {
     try {
       res.set('Content-Type', register.contentType);
       const metricsData = await metrics.getMetrics();

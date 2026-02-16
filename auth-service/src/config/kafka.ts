@@ -53,51 +53,65 @@ export async function connectKafka(): Promise<void> {
       groupId: config.KAFKA_GROUP_ID,
       sessionTimeout: 30000,
       heartbeatInterval: 3000,
+      allowAutoTopicCreation: true,
     });
 
     await consumer.connect();
     logger.info('✅ Kafka consumer connected successfully');
 
-    // Subscribe to relevant topics
-    await consumer.subscribe({
-      topics: ['user_events', 'password_reset_requested'],
-      fromBeginning: false,
-    });
+    // Subscribe to relevant topics (with error handling)
+    // Topics will be created automatically if they don't exist
+    try {
+      await consumer.subscribe({
+        topics: ['user_events', 'password_reset_requested'],
+        fromBeginning: false,
+      });
+      logger.info('✅ Subscribed to Kafka topics');
+      
+      // Start consuming ONLY if subscribe succeeded
+      await consumer.run({
+        eachMessage: async ({ topic, partition, message }) => {
+          try {
+            const value = message.value?.toString();
+            if (value) {
+              const event = JSON.parse(value);
+              logger.info('Kafka message received', {
+                topic,
+                partition,
+                event: event.type,
+              });
 
-    // Start consuming
-    await consumer.run({
-      eachMessage: async ({ topic, partition, message }) => {
-        try {
-          const value = message.value?.toString();
-          if (value) {
-            const event = JSON.parse(value);
-            logger.info('Kafka message received', {
-              topic,
-              partition,
-              event: event.type,
-            });
-
-            // Handle events based on topic
-            switch (topic) {
-              case 'user_events':
-                await handleUserEvent(event);
-                break;
-              case 'password_reset_requested':
-                await handlePasswordResetEvent(event);
-                break;
-              default:
-                logger.warn('Unknown topic', { topic });
+              // Handle events based on topic
+              switch (topic) {
+                case 'user_events':
+                  await handleUserEvent(event);
+                  break;
+                case 'password_reset_requested':
+                  await handlePasswordResetEvent(event);
+                  break;
+                default:
+                  logger.warn('Unknown topic', { topic });
+              }
             }
+          } catch (error) {
+            logger.error('Failed to process Kafka message', { error, topic });
           }
-        } catch (error) {
-          logger.error('Failed to process Kafka message', { error, topic });
-        }
-      },
-    });
+        },
+      });
+    } catch (error) {
+      logger.warn('⚠️  Could not subscribe to Kafka topics, consumer will not run', { 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
+      // Don't start consumer.run() if subscribe failed
+      // Don't throw - service can still start
+    }
 
   } catch (error) {
-    logger.error('❌ Failed to connect to Kafka', { error });
-    throw error;
+    logger.warn('⚠️  Kafka connection failed, service will continue without Kafka', { 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+    // Don't throw - allow service to start without Kafka
+    // Kafka will be unavailable but service can still handle HTTP requests
   }
 }
 

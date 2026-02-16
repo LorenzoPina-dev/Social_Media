@@ -35,7 +35,7 @@ export class SessionService {
 
     // Calculate expiry
     const expiresAt = new Date();
-    expiresAt.setSeconds(expiresAt.getSeconds() + this.parseExpiryTime(config.JWT.REFRESH_EXPIRY));
+    expiresAt.setSeconds(expiresAt.getSeconds() + this.parseExpiryTime(config.JWT.REFRESH_EXPIRY?.toString() ?? "15m"));
 
     // Create session
     const session = await this.sessionModel.create({
