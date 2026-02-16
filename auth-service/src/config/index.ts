@@ -62,66 +62,64 @@ export const config = {
   JWT: {
     ACCESS_SECRET: process.env.JWT_ACCESS_SECRET!,
     REFRESH_SECRET: process.env.JWT_REFRESH_SECRET!,
-    ACCESS_TOKEN_TTL: parseInt(process.env.JWT_ACCESS_TOKEN_TTL || '900', 10), // 15 minutes
-    REFRESH_TOKEN_TTL: parseInt(process.env.JWT_REFRESH_TOKEN_TTL || '2592000', 10), // 30 days
-    SLIDING_WINDOW: parseInt(process.env.JWT_SLIDING_WINDOW || '604800', 10), // 7 days
-    ALGORITHM: (process.env.JWT_ALGORITHM || 'HS256') as 'HS256' | 'RS256',
-    ISSUER: process.env.JWT_ISSUER || 'social-media-platform',
-    AUDIENCE: process.env.JWT_AUDIENCE || 'social-media-api',
+    ACCESS_EXPIRY: process.env.JWT_ACCESS_EXPIRY || '15m',
+    REFRESH_EXPIRY: process.env.JWT_REFRESH_EXPIRY || '30d',
+    ALGORITHM: 'RS256' as const,
+    ISSUER: 'auth-service',
   },
 
-  // Password Security
+  // Password Configuration
   PASSWORD: {
-    MIN_LENGTH: parseInt(process.env.PASSWORD_MIN_LENGTH || '12', 10),
-    REQUIRE_UPPERCASE: process.env.PASSWORD_REQUIRE_UPPERCASE !== 'false',
-    REQUIRE_LOWERCASE: process.env.PASSWORD_REQUIRE_LOWERCASE !== 'false',
-    REQUIRE_NUMBER: process.env.PASSWORD_REQUIRE_NUMBER !== 'false',
-    REQUIRE_SPECIAL: process.env.PASSWORD_REQUIRE_SPECIAL !== 'false',
-    HASH_ALGORITHM: (process.env.PASSWORD_HASH_ALGORITHM || 'argon2id') as 'argon2id' | 'bcrypt',
-    ARGON2_MEMORY: parseInt(process.env.ARGON2_MEMORY || '65536', 10), // 64 MB
-    ARGON2_ITERATIONS: parseInt(process.env.ARGON2_ITERATIONS || '3', 10),
-    ARGON2_PARALLELISM: parseInt(process.env.ARGON2_PARALLELISM || '4', 10),
-    PEPPER: process.env.PASSWORD_PEPPER || '',
+    SALT_ROUNDS: parseInt(process.env.PASSWORD_SALT_ROUNDS || '12', 10),
+    MIN_LENGTH: 8,
+    REQUIRE_UPPERCASE: true,
+    REQUIRE_LOWERCASE: true,
+    REQUIRE_NUMBER: true,
+    REQUIRE_SPECIAL: true,
+  },
+
+  // MFA Configuration
+  MFA: {
+    ENABLED: process.env.MFA_ENABLED === 'true',
+    TOTP_WINDOW: 1,
+    TOTP_STEP: 30,
+    BACKUP_CODES_COUNT: 10,
+  },
+
+  // Session Configuration
+  SESSION: {
+    MAX_SESSIONS_PER_USER: 5,
+    INACTIVITY_TIMEOUT: 1800, // 30 minutes
+    ABSOLUTE_TIMEOUT: 86400, // 24 hours
   },
 
   // Rate Limiting
   RATE_LIMIT: {
     WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes
     MAX_REQUESTS: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
-    LOGIN: {
-      WINDOW_MS: parseInt(process.env.RATE_LIMIT_LOGIN_WINDOW_MS || '900000', 10),
-      MAX_ATTEMPTS: parseInt(process.env.RATE_LIMIT_LOGIN_MAX_ATTEMPTS || '5', 10),
-      LOCKOUT_DURATION: parseInt(process.env.RATE_LIMIT_LOGIN_LOCKOUT_DURATION || '900000', 10),
-    },
+    LOGIN_MAX_ATTEMPTS: 5,
+    LOGIN_WINDOW_MS: 900000, // 15 minutes
   },
 
-  // MFA/2FA
-  MFA: {
-    TOTP_WINDOW: parseInt(process.env.MFA_TOTP_WINDOW || '2', 10),
-    BACKUP_CODES_COUNT: parseInt(process.env.MFA_BACKUP_CODES_COUNT || '10', 10),
-    ENFORCE_FOR_ADMIN: process.env.MFA_ENFORCE_FOR_ADMIN === 'true',
-    ISSUER_NAME: process.env.MFA_ISSUER_NAME || 'Social Media Platform',
-  },
-
-  // Session Management
-  SESSION: {
-    L1_CACHE_TTL: parseInt(process.env.SESSION_L1_CACHE_TTL || '60', 10), // 1 minute
-    L2_CACHE_TTL: parseInt(process.env.SESSION_L2_CACHE_TTL || '86400', 10), // 24 hours
-    MAX_DEVICES_PER_USER: parseInt(process.env.SESSION_MAX_DEVICES_PER_USER || '5', 10),
-  },
-
-  // OAuth2
-  OAUTH2: {
+  // OAuth2 Configuration
+  OAUTH: {
     GOOGLE: {
-      CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
-      CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
-      CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3001/api/v1/auth/google/callback',
+      CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+      CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+      CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL,
     },
-    APPLE: {
-      CLIENT_ID: process.env.APPLE_CLIENT_ID || '',
-      CLIENT_SECRET: process.env.APPLE_CLIENT_SECRET || '',
-      CALLBACK_URL: process.env.APPLE_CALLBACK_URL || 'http://localhost:3001/api/v1/auth/apple/callback',
+    GITHUB: {
+      CLIENT_ID: process.env.GITHUB_CLIENT_ID,
+      CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
+      CALLBACK_URL: process.env.GITHUB_CALLBACK_URL,
     },
+  },
+
+  // Cache TTLs
+  CACHE: {
+    SESSION_TTL: 3600, // 1 hour
+    TOKEN_BLACKLIST_TTL: 86400, // 24 hours
+    RATE_LIMIT_TTL: 900, // 15 minutes
   },
 
   // Logging

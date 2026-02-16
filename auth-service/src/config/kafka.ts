@@ -1,6 +1,6 @@
 /**
  * Kafka Configuration
- * Producer and Consumer setup for Auth Service
+ * Producer and Consumer setup for event streaming
  */
 
 import { Kafka, Producer, Consumer, logLevel } from 'kafkajs';
@@ -33,7 +33,7 @@ function createKafka(): Kafka {
 }
 
 /**
- * Connect Kafka producer
+ * Connect Kafka producer and consumer
  */
 export async function connectKafka(): Promise<void> {
   try {
@@ -60,7 +60,7 @@ export async function connectKafka(): Promise<void> {
 
     // Subscribe to relevant topics
     await consumer.subscribe({
-      topics: ['user_events'],
+      topics: ['user_events', 'password_reset_requested'],
       fromBeginning: false,
     });
 
@@ -77,8 +77,17 @@ export async function connectKafka(): Promise<void> {
               event: event.type,
             });
 
-            // Handle events
-            // TODO: Implement event handlers
+            // Handle events based on topic
+            switch (topic) {
+              case 'user_events':
+                await handleUserEvent(event);
+                break;
+              case 'password_reset_requested':
+                await handlePasswordResetEvent(event);
+                break;
+              default:
+                logger.warn('Unknown topic', { topic });
+            }
           }
         } catch (error) {
           logger.error('Failed to process Kafka message', { error, topic });
@@ -90,6 +99,22 @@ export async function connectKafka(): Promise<void> {
     logger.error('❌ Failed to connect to Kafka', { error });
     throw error;
   }
+}
+
+/**
+ * Handle user events
+ */
+async function handleUserEvent(event: any): Promise<void> {
+  logger.info('Handling user event', { eventType: event.type });
+  // TODO: Implement user event handlers
+}
+
+/**
+ * Handle password reset events
+ */
+async function handlePasswordResetEvent(event: any): Promise<void> {
+  logger.info('Handling password reset event', { eventType: event.type });
+  // TODO: Implement password reset handlers
 }
 
 /**

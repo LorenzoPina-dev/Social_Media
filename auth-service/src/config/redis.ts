@@ -26,6 +26,8 @@ export async function connectRedis(): Promise<Redis> {
         return delay;
       },
       maxRetriesPerRequest: 3,
+      enableReadyCheck: true,
+      enableOfflineQueue: true,
     });
 
     redisClient.on('error', (error) => {
@@ -42,6 +44,10 @@ export async function connectRedis(): Promise<Redis> {
 
     redisClient.on('reconnecting', () => {
       logger.warn('Redis reconnecting...');
+    });
+
+    redisClient.on('close', () => {
+      logger.warn('Redis connection closed');
     });
 
     // Test connection

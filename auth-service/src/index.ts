@@ -1,7 +1,7 @@
 /**
  * Auth Service - Main Entry Point
  * 
- * Handles authentication, authorization, JWT tokens, MFA, OAuth2, session management
+ * Handles authentication, authorization, JWT tokens, MFA, OAuth2
  * 
  * @module auth-service
  */
@@ -11,17 +11,16 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import passport from 'passport';
 import { config } from './config';
 import { logger } from './utils/logger';
 import { setupRoutes } from './routes';
 import { connectDatabase } from './config/database';
 import { connectRedis } from './config/redis';
 import { connectKafka } from './config/kafka';
-import { setupPassport } from './config/passport';
 import { startMetricsServer } from './utils/metrics';
 import { errorHandler } from './middleware/errorHandler';
 import { setupGracefulShutdown } from './utils/gracefulShutdown';
+import { requestLogger } from './middleware/requestLogger';
 
 /**
  * Bootstrap the Auth Service
@@ -35,6 +34,9 @@ async function bootstrap(): Promise<void> {
     });
 
     const app: Application = express();
+
+    // Trust proxy (for rate limiting and IP detection)
+    app.set('trust proxy', 1);
 
     // Security middleware
     app.use(helmet({
@@ -65,10 +67,9 @@ async function bootstrap(): Promise<void> {
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ extended: true, limit: '10mb' }));
     app.use(compression());
-    app.set('trust proxy', 1);
 
-    // Passport initialization
-    app.use(passport.initialize());
+    // Request logging
+    app.use(requestLogger);
 
     // Connect to infrastructure
     logger.info('📦 Connecting to infrastructure...');
@@ -78,9 +79,6 @@ async function bootstrap(): Promise<void> {
       connectKafka(),
     ]);
     logger.info('✅ Infrastructure connected successfully');
-
-    // Setup Passport strategies
-    setupPassport();
 
     // Setup routes
     setupRoutes(app);
