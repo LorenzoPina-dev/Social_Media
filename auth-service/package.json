@@ -1,0 +1,48 @@
+{
+  "name": "auth-service",
+  "version": "1.0.0",
+  "description": "Production-ready auth-service microservice",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "nodemon --exec ts-node src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest --coverage",
+    "test:unit": "jest --testPathPattern=tests/unit",
+    "test:integration": "jest --testPathPattern=tests/integration",
+    "test:e2e": "jest --testPathPattern=tests/e2e",
+    "lint": "eslint src/**/*.ts",
+    "format": "prettier --write \"src/**/*.ts\""
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "compression": "^1.7.4",
+    "express-rate-limit": "^7.1.5",
+    "ioredis": "^5.3.2",
+    "kafkajs": "^2.2.4",
+    "pg": "^8.11.3",
+    "knex": "^3.1.0",
+    "joi": "^17.11.0",
+    "winston": "^3.11.0",
+    "prom-client": "^15.1.0",
+    "dotenv": "^16.3.1",
+    "uuid": "^9.0.1",
+    "express-async-errors": "^3.1.1",
+    "@social-media/shared": "file:../shared"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.6",
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2",
+    "nodemon": "^3.0.2",
+    "eslint": "^8.56.0",
+    "@typescript-eslint/eslint-plugin": "^6.17.0",
+    "prettier": "^3.1.1",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "supertest": "^6.3.3"
+  }
+}
