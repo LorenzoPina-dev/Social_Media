@@ -1,289 +1,377 @@
 /**
- * MFA Service Unit Tests
+ * MFAService — Unit Tests
+ *
+ * Il service importa speakeasy come namespace (`import * as speakeasy`),
+ * quindi il mock deve restituire un oggetto con le stesse proprietà.
  */
 
-import { MFAService } from '../../src/services/mfa.service';
-import { MFAModel } from '../../src/models/mfa.model';
-import { UserModel } from '../../src/models/user.model';
-import { AuthProducer } from '../../src/kafka/producers/auth.producer';
+// ── mock PRIMA di qualsiasi import ────────────────────────────────────────
+jest.mock('speakeasy', () => ({
+  generateSecret: jest.fn(),
+  totp: { verify: jest.fn() },
+}));
+jest.mock('qrcode', () => ({ toDataURL: jest.fn() }));
 
-// Mock dependencies
+jest.mock('../../src/config/database', () => ({ getDatabase: jest.fn(), connectDatabase: jest.fn() }));
+jest.mock('../../src/config/redis',    () => ({ getRedisClient: jest.fn(), connectRedis: jest.fn() }));
+jest.mock('../../src/config/kafka',    () => ({ getKafkaProducer: jest.fn(), connectKafka: jest.fn() }));
+jest.mock('../../src/utils/logger',    () => ({ logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() } }));
+jest.mock('../../src/utils/metrics',   () => ({ metrics: { incrementCounter: jest.fn(), recordRequestDuration: jest.fn() } }));
 jest.mock('../../src/models/mfa.model');
 jest.mock('../../src/models/user.model');
 jest.mock('../../src/kafka/producers/auth.producer');
-jest.mock('speakeasy');
-jest.mock('qrcode');
 
-// Import mocked modules
 import * as speakeasy from 'speakeasy';
-import * as QRCode from 'qrcode';
+import * as QRCode    from 'qrcode';
+import { MFAService }   from '../../src/services/mfa.service';
+import { MFAModel }     from '../../src/models/mfa.model';
+import { UserModel }    from '../../src/models/user.model';
+import { AuthProducer } from '../../src/kafka/producers/auth.producer';
+import { User, MFASecret, ValidationError } from '../../src/types';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shorthand per i mock di speakeasy (namespace mock)
+const mockGenerateSecret = speakeasy.generateSecret as jest.Mock;
+const mockTotpVerify     = speakeasy.totp.verify    as jest.Mock;
+const mockQrToDataURL    = QRCode.toDataURL          as jest.Mock;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fixtures
+// ─────────────────────────────────────────────────────────────────────────────
+const USER_ID = 'uid-mfa-001';
+
+const MOCK_USER: User = {
+  id:            USER_ID,
+  username:      'mfauser',
+  email:         'mfa@example.com',
+  password_hash: '$argon2id$hash',
+  verified:      true,
+  mfa_enabled:   false,
+  status:        'ACTIVE',
+  created_at:    new Date(),
+  updated_at:    new Date(),
+};
+
+const BACKUP_CODES = Array.from({ length: 10 }, (_, i) => `CODE0${i + 1}`);
+
+const MOCK_MFA_SECRET: MFASecret = {
+  id:           'mfa-001',
+  user_id:      USER_ID,
+  secret:       'BASE32SECRET',
+  backup_codes: BACKUP_CODES,
+  created_at:   new Date(),
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 describe('MFAService', () => {
-  let mfaService: MFAService;
+  let service: MFAService;
   let mfaModel: jest.Mocked<MFAModel>;
   let userModel: jest.Mocked<UserModel>;
   let authProducer: jest.Mocked<AuthProducer>;
 
   beforeEach(() => {
-    mfaModel = new MFAModel() as jest.Mocked<MFAModel>;
-    userModel = new UserModel() as jest.Mocked<UserModel>;
+    jest.clearAllMocks();
+
+    mfaModel     = new MFAModel()     as jest.Mocked<MFAModel>;
+    userModel    = new UserModel()    as jest.Mocked<UserModel>;
     authProducer = new AuthProducer() as jest.Mocked<AuthProducer>;
 
-    mfaService = new MFAService(mfaModel, userModel, authProducer);
+    service = new MFAService(mfaModel, userModel, authProducer);
+    authProducer.publishMFAEnabled.mockResolvedValue(undefined);
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
+  // ═══════════════════════════════════════════════════════════════════════════
   describe('setupMFA', () => {
-    const userId = '123';
-    const mockUser = {
-      id: userId,
-      username: 'testuser',
-      email: 'test@example.com',
-      mfa_enabled: false,
-    } as any;
-
-    it('should setup MFA successfully', async () => {
-      // Mock user
-      userModel.findById.mockResolvedValue(mockUser);
-
-      // Mock secret generation
-      const mockSecret = {
-        base32: 'TESTSECRET',
-        otpauth_url: 'otpauth://totp/test',
-      };
-      (speakeasy.generateSecret as jest.Mock).mockReturnValue(mockSecret);
-
-      // Mock MFA secret creation
-      const mockMFASecret = {
-        id: 'mfa-123',
-        user_id: userId,
-        secret: 'TESTSECRET',
-        backup_codes: ['CODE1', 'CODE2', 'CODE3'],
-      } as any;
-      mfaModel.create.mockResolvedValue(mockMFASecret);
-
-      // Mock QR code generation
-      (QRCode.toDataURL as jest.Mock).mockResolvedValue('data:image/png;base64,test');
-
-      // Execute
-      const result = await mfaService.setupMFA(userId);
-
-      // Assertions
-      expect(result).toHaveProperty('secret');
-      expect(result).toHaveProperty('qr_code');
-      expect(result).toHaveProperty('backup_codes');
-      expect(result.backup_codes).toHaveLength(3);
-      expect(userModel.findById).toHaveBeenCalledWith(userId);
-      expect(mfaModel.create).toHaveBeenCalled();
+    beforeEach(() => {
+      userModel.findById.mockResolvedValue(MOCK_USER);
+      mockGenerateSecret.mockReturnValue({
+        base32:      'BASE32SECRET',
+        otpauth_url: 'otpauth://totp/Social%20Media%20(mfauser)?secret=BASE32SECRET',
+      });
+      mfaModel.create.mockResolvedValue(MOCK_MFA_SECRET);
+      mockQrToDataURL.mockResolvedValue('data:image/png;base64,QR_DATA');
     });
 
-    it('should throw error if user not found', async () => {
+    it('restituisce secret, qr_code e 10 backup_codes', async () => {
+      const result = await service.setupMFA(USER_ID);
+
+      expect(result.secret).toBe('BASE32SECRET');
+      expect(result.qr_code).toBe('data:image/png;base64,QR_DATA');
+      expect(result.backup_codes).toHaveLength(10);
+    });
+
+    it('chiama speakeasy.generateSecret con name e issuer corretti', async () => {
+      await service.setupMFA(USER_ID);
+
+      expect(mockGenerateSecret).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name:   expect.stringContaining('mfauser'),
+          issuer: expect.any(String),
+          length: 32,
+        }),
+      );
+    });
+
+    it('chiama mfaModel.create con userId e secret base32', async () => {
+      await service.setupMFA(USER_ID);
+      expect(mfaModel.create).toHaveBeenCalledWith(USER_ID, 'BASE32SECRET');
+    });
+
+    it('genera il QR code dall\'otpauth_url', async () => {
+      await service.setupMFA(USER_ID);
+      expect(mockQrToDataURL).toHaveBeenCalledWith(
+        expect.stringContaining('otpauth://totp/'),
+      );
+    });
+
+    it('lancia ValidationError se l\'utente non esiste', async () => {
       userModel.findById.mockResolvedValue(null);
-
-      await expect(mfaService.setupMFA(userId)).rejects.toThrow('User not found');
+      await expect(service.setupMFA(USER_ID)).rejects.toBeInstanceOf(ValidationError);
     });
 
-    it('should throw error if MFA already enabled', async () => {
-      const userWithMFA = { ...mockUser, mfa_enabled: true };
-      userModel.findById.mockResolvedValue(userWithMFA);
+    it('lancia ValidationError se MFA è già abilitato', async () => {
+      userModel.findById.mockResolvedValue({ ...MOCK_USER, mfa_enabled: true });
+      await expect(service.setupMFA(USER_ID)).rejects.toBeInstanceOf(ValidationError);
+    });
 
-      await expect(mfaService.setupMFA(userId)).rejects.toThrow('MFA already enabled');
+    it('non chiama mfaModel.create se l\'utente non esiste', async () => {
+      userModel.findById.mockResolvedValue(null);
+      await expect(service.setupMFA(USER_ID)).rejects.toThrow();
+      expect(mfaModel.create).not.toHaveBeenCalled();
     });
   });
 
+  // ═══════════════════════════════════════════════════════════════════════════
   describe('verifyAndEnableMFA', () => {
-    const userId = '123';
-    const code = '123456';
+    const CODE = '123456';
 
-    it('should verify and enable MFA successfully', async () => {
-      // Mock MFA secret
-      const mockMFASecret = {
-        id: 'mfa-123',
-        user_id: userId,
-        secret: 'TESTSECRET',
-        backup_codes: ['CODE1', 'CODE2'],
-      } as any;
-      mfaModel.findByUserId.mockResolvedValue(mockMFASecret);
+    beforeEach(() => {
+      mfaModel.findByUserId.mockResolvedValue(MOCK_MFA_SECRET);
+      mockTotpVerify.mockReturnValue(true);
+      mfaModel.verify.mockResolvedValue(undefined);
+      userModel.enableMFA.mockResolvedValue(undefined);
+    });
 
-      // Mock TOTP verification
-      (speakeasy.totp.verify as jest.Mock).mockReturnValue(true);
+    it('restituisce { success: true, backup_codes } per codice valido', async () => {
+      const result = await service.verifyAndEnableMFA(USER_ID, { code: CODE });
 
-      // Mock model methods
-      mfaModel.verify.mockResolvedValue();
-      userModel.enableMFA.mockResolvedValue();
-      authProducer.publishMFAEnabled.mockResolvedValue();
-
-      // Execute
-      const result = await mfaService.verifyAndEnableMFA(userId, { code });
-
-      // Assertions
       expect(result.success).toBe(true);
-      expect(result.backup_codes).toHaveLength(2);
-      expect(mfaModel.verify).toHaveBeenCalledWith(mockMFASecret.id);
-      expect(userModel.enableMFA).toHaveBeenCalledWith(userId, mockMFASecret.secret);
-      expect(authProducer.publishMFAEnabled).toHaveBeenCalled();
+      expect(result.backup_codes).toHaveLength(10);
     });
 
-    it('should throw error for invalid MFA code', async () => {
-      const mockMFASecret = {
-        id: 'mfa-123',
-        secret: 'TESTSECRET',
-      } as any;
-      mfaModel.findByUserId.mockResolvedValue(mockMFASecret);
+    it('chiama totp.verify con secret, encoding e window corretti', async () => {
+      await service.verifyAndEnableMFA(USER_ID, { code: CODE });
 
-      // Mock TOTP verification failure
-      (speakeasy.totp.verify as jest.Mock).mockReturnValue(false);
-
-      await expect(
-        mfaService.verifyAndEnableMFA(userId, { code })
-      ).rejects.toThrow('Invalid MFA code');
+      expect(mockTotpVerify).toHaveBeenCalledWith(
+        expect.objectContaining({
+          secret:   'BASE32SECRET',
+          encoding: 'base32',
+          token:    CODE,
+          window:   1,
+        }),
+      );
     });
 
-    it('should throw error if MFA not set up', async () => {
+    it('chiama mfaModel.verify con l\'id del secret', async () => {
+      await service.verifyAndEnableMFA(USER_ID, { code: CODE });
+      expect(mfaModel.verify).toHaveBeenCalledWith(MOCK_MFA_SECRET.id);
+    });
+
+    it('chiama userModel.enableMFA con userId e secret', async () => {
+      await service.verifyAndEnableMFA(USER_ID, { code: CODE });
+      expect(userModel.enableMFA).toHaveBeenCalledWith(USER_ID, MOCK_MFA_SECRET.secret);
+    });
+
+    it('pubblica evento mfa_enabled', async () => {
+      await service.verifyAndEnableMFA(USER_ID, { code: CODE });
+      expect(authProducer.publishMFAEnabled).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'mfa_enabled', userId: USER_ID }),
+      );
+    });
+
+    it('lancia ValidationError se il secret non è ancora configurato', async () => {
       mfaModel.findByUserId.mockResolvedValue(null);
+      await expect(service.verifyAndEnableMFA(USER_ID, { code: CODE })).rejects.toBeInstanceOf(ValidationError);
+    });
 
-      await expect(
-        mfaService.verifyAndEnableMFA(userId, { code })
-      ).rejects.toThrow('MFA not set up');
+    it('lancia ValidationError per codice TOTP errato', async () => {
+      mockTotpVerify.mockReturnValue(false);
+      await expect(service.verifyAndEnableMFA(USER_ID, { code: '000000' })).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it('non chiama enableMFA se il codice è errato', async () => {
+      mockTotpVerify.mockReturnValue(false);
+      await expect(service.verifyAndEnableMFA(USER_ID, { code: '000000' })).rejects.toThrow();
+      expect(userModel.enableMFA).not.toHaveBeenCalled();
     });
   });
 
+  // ═══════════════════════════════════════════════════════════════════════════
   describe('verifyMFAToken', () => {
-    const userId = '123';
-    const code = '123456';
+    const MFA_USER = { ...MOCK_USER, mfa_enabled: true, mfa_secret: 'BASE32SECRET' };
 
-    it('should verify TOTP code successfully', async () => {
-      const mockUser = {
-        id: userId,
-        mfa_enabled: true,
-        mfa_secret: 'TESTSECRET',
-      } as any;
-      userModel.findById.mockResolvedValue(mockUser);
-
-      (speakeasy.totp.verify as jest.Mock).mockReturnValue(true);
-
-      const result = await mfaService.verifyMFAToken(userId, code);
-
-      expect(result).toBe(true);
+    beforeEach(() => {
+      userModel.findById.mockResolvedValue(MFA_USER);
     });
 
-    it('should verify backup code successfully', async () => {
-      const mockUser = {
-        id: userId,
-        mfa_enabled: true,
-        mfa_secret: 'TESTSECRET',
-      } as any;
-      userModel.findById.mockResolvedValue(mockUser);
+    it('restituisce true per codice TOTP valido', async () => {
+      mockTotpVerify.mockReturnValue(true);
+      expect(await service.verifyMFAToken(USER_ID, '123456')).toBe(true);
+    });
 
-      // TOTP fails
-      (speakeasy.totp.verify as jest.Mock).mockReturnValue(false);
+    it('non controlla backup code se TOTP è valido', async () => {
+      mockTotpVerify.mockReturnValue(true);
+      await service.verifyMFAToken(USER_ID, '123456');
+      expect(mfaModel.useBackupCode).not.toHaveBeenCalled();
+    });
 
-      // Backup code succeeds
+    it('prova backup code quando TOTP fallisce e restituisce true', async () => {
+      mockTotpVerify.mockReturnValue(false);
       mfaModel.useBackupCode.mockResolvedValue(true);
 
-      const result = await mfaService.verifyMFAToken(userId, code);
-
-      expect(result).toBe(true);
-      expect(mfaModel.useBackupCode).toHaveBeenCalledWith(userId, code);
+      expect(await service.verifyMFAToken(USER_ID, 'CODE01')).toBe(true);
+      expect(mfaModel.useBackupCode).toHaveBeenCalledWith(USER_ID, 'CODE01');
     });
 
-    it('should return false for invalid code', async () => {
-      const mockUser = {
-        id: userId,
-        mfa_enabled: true,
-        mfa_secret: 'TESTSECRET',
-      } as any;
-      userModel.findById.mockResolvedValue(mockUser);
-
-      (speakeasy.totp.verify as jest.Mock).mockReturnValue(false);
+    it('restituisce false se né TOTP né backup code sono validi', async () => {
+      mockTotpVerify.mockReturnValue(false);
       mfaModel.useBackupCode.mockResolvedValue(false);
 
-      const result = await mfaService.verifyMFAToken(userId, code);
+      expect(await service.verifyMFAToken(USER_ID, 'WRONG')).toBe(false);
+    });
 
-      expect(result).toBe(false);
+    it('restituisce false se l\'utente non esiste', async () => {
+      userModel.findById.mockResolvedValue(null);
+      expect(await service.verifyMFAToken(USER_ID, '123456')).toBe(false);
+    });
+
+    it('restituisce false se MFA non è abilitato', async () => {
+      userModel.findById.mockResolvedValue(MOCK_USER); // mfa_enabled: false
+      expect(await service.verifyMFAToken(USER_ID, '123456')).toBe(false);
+    });
+
+    it('restituisce false se mfa_secret è null', async () => {
+      userModel.findById.mockResolvedValue({ ...MOCK_USER, mfa_enabled: true, mfa_secret: undefined });
+      expect(await service.verifyMFAToken(USER_ID, '123456')).toBe(false);
     });
   });
 
+  // ═══════════════════════════════════════════════════════════════════════════
   describe('disableMFA', () => {
-    const userId = '123';
-    const code = '123456';
+    const MFA_USER = { ...MOCK_USER, mfa_enabled: true, mfa_secret: 'BASE32SECRET' };
 
-    it('should disable MFA successfully', async () => {
-      const mockUser = {
-        id: userId,
-        mfa_enabled: true,
-        mfa_secret: 'TESTSECRET',
-      } as any;
-      userModel.findById.mockResolvedValue(mockUser);
-
-      (speakeasy.totp.verify as jest.Mock).mockReturnValue(true);
-
-      userModel.disableMFA.mockResolvedValue();
-      mfaModel.delete.mockResolvedValue();
-
-      await mfaService.disableMFA(userId, code);
-
-      expect(userModel.disableMFA).toHaveBeenCalledWith(userId);
-      expect(mfaModel.delete).toHaveBeenCalledWith(userId);
+    beforeEach(() => {
+      userModel.findById.mockResolvedValue(MFA_USER);
+      mockTotpVerify.mockReturnValue(true);
+      userModel.disableMFA.mockResolvedValue(undefined);
+      mfaModel.delete.mockResolvedValue(undefined);
     });
 
-    it('should throw error for invalid code', async () => {
-      const mockUser = {
-        id: userId,
-        mfa_enabled: true,
-        mfa_secret: 'TESTSECRET',
-      } as any;
-      userModel.findById.mockResolvedValue(mockUser);
+    it('disabilita MFA per un codice TOTP valido', async () => {
+      await service.disableMFA(USER_ID, '123456');
 
-      (speakeasy.totp.verify as jest.Mock).mockReturnValue(false);
+      expect(userModel.disableMFA).toHaveBeenCalledWith(USER_ID);
+      expect(mfaModel.delete).toHaveBeenCalledWith(USER_ID);
+    });
+
+    it('disabilita MFA usando un backup code valido', async () => {
+      mockTotpVerify.mockReturnValue(false);
+      mfaModel.useBackupCode.mockResolvedValue(true);
+
+      await service.disableMFA(USER_ID, 'CODE01');
+
+      expect(userModel.disableMFA).toHaveBeenCalledWith(USER_ID);
+    });
+
+    it('lancia ValidationError per codice errato', async () => {
+      mockTotpVerify.mockReturnValue(false);
       mfaModel.useBackupCode.mockResolvedValue(false);
 
-      await expect(mfaService.disableMFA(userId, code)).rejects.toThrow('Invalid MFA code');
+      await expect(service.disableMFA(USER_ID, '000000')).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it('non chiama disableMFA se il codice è sbagliato', async () => {
+      mockTotpVerify.mockReturnValue(false);
+      mfaModel.useBackupCode.mockResolvedValue(false);
+
+      await expect(service.disableMFA(USER_ID, '000000')).rejects.toThrow();
+      expect(userModel.disableMFA).not.toHaveBeenCalled();
     });
   });
 
-  describe('getMFAStatus', () => {
-    const userId = '123';
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe('regenerateBackupCodes', () => {
+    const MFA_USER = { ...MOCK_USER, mfa_enabled: true, mfa_secret: 'BASE32SECRET' };
+    const NEW_CODES = Array.from({ length: 10 }, (_, i) => `NEW0${i + 1}`);
 
-    it('should return disabled status', async () => {
-      const mockUser = {
-        id: userId,
-        mfa_enabled: false,
-      } as any;
-      userModel.findById.mockResolvedValue(mockUser);
-
-      const result = await mfaService.getMFAStatus(userId);
-
-      expect(result).toEqual({
-        enabled: false,
-        verified: false,
-        backup_codes_remaining: 0,
-      });
+    beforeEach(() => {
+      userModel.findById.mockResolvedValue(MFA_USER);
+      mockTotpVerify.mockReturnValue(true);
+      mfaModel.regenerateBackupCodes.mockResolvedValue(NEW_CODES);
     });
 
-    it('should return enabled status with backup codes', async () => {
-      const mockUser = {
-        id: userId,
-        mfa_enabled: true,
-      } as any;
-      userModel.findById.mockResolvedValue(mockUser);
+    it('restituisce 10 nuovi backup codes per codice valido', async () => {
+      const codes = await service.regenerateBackupCodes(USER_ID, '123456');
 
-      const mockMFASecret = {
-        verified_at: new Date(),
-        backup_codes: ['CODE1', 'CODE2', 'CODE3'],
-      } as any;
-      mfaModel.findByUserId.mockResolvedValue(mockMFASecret);
+      expect(codes).toHaveLength(10);
+      expect(codes).toEqual(NEW_CODES);
+    });
 
-      const result = await mfaService.getMFAStatus(userId);
+    it('chiama mfaModel.regenerateBackupCodes con lo userId', async () => {
+      await service.regenerateBackupCodes(USER_ID, '123456');
+      expect(mfaModel.regenerateBackupCodes).toHaveBeenCalledWith(USER_ID);
+    });
 
-      expect(result).toEqual({
-        enabled: true,
-        verified: true,
-        backup_codes_remaining: 3,
+    it('lancia ValidationError per codice errato', async () => {
+      mockTotpVerify.mockReturnValue(false);
+      mfaModel.useBackupCode.mockResolvedValue(false);
+
+      await expect(service.regenerateBackupCodes(USER_ID, '000000')).rejects.toBeInstanceOf(ValidationError);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe('getMFAStatus', () => {
+    it('restituisce { enabled:false, verified:false, backup_codes_remaining:0 } se MFA non attivo', async () => {
+      userModel.findById.mockResolvedValue(MOCK_USER); // mfa_enabled: false
+
+      const status = await service.getMFAStatus(USER_ID);
+
+      expect(status).toEqual({ enabled: false, verified: false, backup_codes_remaining: 0 });
+    });
+
+    it('restituisce stato corretto con MFA attivo e verificato', async () => {
+      userModel.findById.mockResolvedValue({ ...MOCK_USER, mfa_enabled: true });
+      mfaModel.findByUserId.mockResolvedValue({
+        ...MOCK_MFA_SECRET,
+        verified_at:  new Date(),
+        backup_codes: ['A', 'B', 'C'],
       });
+
+      const status = await service.getMFAStatus(USER_ID);
+
+      expect(status.enabled).toBe(true);
+      expect(status.verified).toBe(true);
+      expect(status.backup_codes_remaining).toBe(3);
+    });
+
+    it('restituisce verified:false se il secret non è ancora stato verificato', async () => {
+      userModel.findById.mockResolvedValue({ ...MOCK_USER, mfa_enabled: true });
+      mfaModel.findByUserId.mockResolvedValue({
+        ...MOCK_MFA_SECRET,
+        verified_at:  undefined,
+        backup_codes: ['X'],
+      });
+
+      const status = await service.getMFAStatus(USER_ID);
+
+      expect(status.verified).toBe(false);
+    });
+
+    it('lancia ValidationError se l\'utente non esiste', async () => {
+      userModel.findById.mockResolvedValue(null);
+      await expect(service.getMFAStatus(USER_ID)).rejects.toBeInstanceOf(ValidationError);
     });
   });
 });

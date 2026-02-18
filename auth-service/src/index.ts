@@ -1,25 +1,16 @@
 /**
  * Auth Service - Main Entry Point
- * 
+ *
  * Handles authentication, authorization, JWT tokens, MFA, OAuth2
- * 
+ *
  * @module auth-service
  */
 import 'express-async-errors';
-import express, { Application } from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import compression from 'compression';
 import { config } from './config';
 import { logger } from './utils/logger';
-import { setupRoutes } from './routes';
-import { connectDatabase } from './config/database';
-import { connectRedis } from './config/redis';
-import { connectKafka } from './config/kafka';
 import { startMetricsServer } from './utils/metrics';
-import { errorHandler } from './middleware/errorHandler';
 import { setupGracefulShutdown } from './utils/gracefulShutdown';
-import { requestLogger } from './middleware/requestLogger';
+import { createApp } from './app';
 
 /**
  * Bootstrap the Auth Service
@@ -32,114 +23,8 @@ async function bootstrap(): Promise<void> {
       env: config.NODE_ENV,
     });
 
-    const app: Application = express();
-
-    // Trust proxy (for rate limiting and IP detection)
-    app.set('trust proxy', 1);
-
-    // Security middleware
-    app.use(helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'"],
-          imgSrc: ["'self'", 'data:', 'https:'],
-        },
-      },
-      hsts: {
-        maxAge: 31536000,
-        includeSubDomains: true,
-        preload: true,
-      },
-    }));
-
-    // CORS configuration
-    app.use(cors({
-      origin: config.CORS_ORIGINS,
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
-    }));
-
-    // Body parsing & compression
-    app.use(express.json({ limit: '10mb' }));
-    app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-    app.use(compression());
-
-    // Request logging
-    app.use(requestLogger);
-
-    // Connect to infrastructure
-    logger.info('📦 Connecting to infrastructure...');
-    
-    // Connect to critical infrastructure (Database and Redis)
-    await Promise.all([
-      connectDatabase(),
-      connectRedis(),
-    ]);
-    
-    // Connect to Kafka (non-blocking, service can run without it)
-    connectKafka().catch(error => {
-      logger.warn('⚠️  Kafka connection failed, continuing without Kafka', { error });
-    });
-    
-    logger.info('✅ Infrastructure connected successfully');
-
-    // Setup routes
-    setupRoutes(app);
-
-    // Health checks
-    app.get('/health', (_, res) => {
-      res.json({
-        status: 'healthy',
-        service: 'auth-service',
-        version: process.env.npm_package_version || '1.0.0',
-        timestamp: new Date().toISOString(),
-      });
-    });
-
-    app.get('/health/ready', async (_, res) => {
-      try {
-        const { getDatabase } = await import('./config/database');
-        const { getRedisClient } = await import('./config/redis');
-        const { getKafkaProducer } = await import('./config/kafka');
-        
-        const db = getDatabase();
-        const redis = getRedisClient();
-
-        // Check critical services
-        await db.raw('SELECT 1');
-        await redis.ping();
-
-        // Check Kafka (non-critical)
-        let kafkaStatus = 'ok';
-        try {
-          getKafkaProducer();
-        } catch (error) {
-          kafkaStatus = 'unavailable';
-        }
-
-        res.json({
-          status: 'ready',
-          checks: {
-            database: 'ok',
-            redis: 'ok',
-            kafka: kafkaStatus,
-          },
-          timestamp: new Date().toISOString(),
-        });
-      } catch (error) {
-        logger.error('Health check failed', { error });
-        res.status(503).json({
-          status: 'not ready',
-          error: 'Health check failed',
-        });
-      }
-    });
-
-    // Error handling (must be last)
-    app.use(errorHandler);
+    // Create app
+    const app = await createApp();
 
     // Start HTTP server
     const PORT = config.PORT || 3001;

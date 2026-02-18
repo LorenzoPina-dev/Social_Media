@@ -6,6 +6,7 @@
 import { Kafka, Producer, Consumer, logLevel } from 'kafkajs';
 import { config } from './index';
 import { logger } from '../utils/logger';
+import { AuthEvent } from '../types';
 
 let kafka: Kafka | null = null;
 let producer: Producer | null = null;
@@ -74,7 +75,7 @@ export async function connectKafka(): Promise<void> {
           try {
             const value = message.value?.toString();
             if (value) {
-              const event = JSON.parse(value);
+              const event = JSON.parse(value) as AuthEvent;
               logger.info('Kafka message received', {
                 topic,
                 partition,
@@ -118,7 +119,7 @@ export async function connectKafka(): Promise<void> {
 /**
  * Handle user events
  */
-async function handleUserEvent(event: any): Promise<void> {
+async function handleUserEvent(event: AuthEvent): Promise<void> {
   logger.info('Handling user event', { eventType: event.type });
   // TODO: Implement user event handlers
 }
@@ -126,7 +127,7 @@ async function handleUserEvent(event: any): Promise<void> {
 /**
  * Handle password reset events
  */
-async function handlePasswordResetEvent(event: any): Promise<void> {
+async function handlePasswordResetEvent(event: AuthEvent): Promise<void> {
   logger.info('Handling password reset event', { eventType: event.type });
   // TODO: Implement password reset handlers
 }

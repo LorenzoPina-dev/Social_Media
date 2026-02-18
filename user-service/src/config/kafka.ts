@@ -53,6 +53,7 @@ export async function connectKafka(): Promise<void> {
       groupId: config.KAFKA_GROUP_ID,
       sessionTimeout: 30000,
       heartbeatInterval: 3000,
+      allowAutoTopicCreation: true,
     });
 
     await consumer.connect();

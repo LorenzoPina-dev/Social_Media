@@ -6,7 +6,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { logger } from '../utils/logger';
-import { config } from '../config';
+//import { config } from '../config';
 
 interface JWTPayload {
   userId: string;
@@ -81,7 +81,7 @@ export function requireAuth(
  */
 export function optionalAuth(
   req: Request,
-  res: Response,
+  _: Response,
   next: NextFunction
 ): void {
   try {

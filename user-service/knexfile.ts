@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 
 /**
- * knexfile.ts — Auth Service
+ * knexfile.ts — User Service
  *
  * Usato da: `knex migrate:latest`, `knex migrate:rollback`, ecc.
  * Per i test, DATABASE_URL è sovrascritta da process.env.TEST_DATABASE_URL
@@ -27,7 +27,7 @@ const config: Record<string, Knex.Config> = {
     client: 'postgresql',
     connection:
       process.env.TEST_DATABASE_URL ||
-      'postgresql://postgres:postgres@localhost:5432/auth_test_db',
+      'postgresql://postgres:postgres@localhost:5432/user_test_db',
     pool: { min: 1, max: 5 },
     migrations: {
       directory: './migrations',

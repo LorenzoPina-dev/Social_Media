@@ -13,13 +13,13 @@ import { logger } from '../utils/logger';
  */
 export function setupPassport(): void {
   // Google OAuth2 Strategy
-  if (config.OAUTH2.GOOGLE.CLIENT_ID && config.OAUTH2.GOOGLE.CLIENT_SECRET) {
+  if (config.OAUTH.GOOGLE.CLIENT_ID && config.OAUTH.GOOGLE.CLIENT_SECRET) {
     passport.use(
       new GoogleStrategy(
         {
-          clientID: config.OAUTH2.GOOGLE.CLIENT_ID,
-          clientSecret: config.OAUTH2.GOOGLE.CLIENT_SECRET,
-          callbackURL: config.OAUTH2.GOOGLE.CALLBACK_URL,
+          clientID: config.OAUTH.GOOGLE.CLIENT_ID,
+          clientSecret: config.OAUTH.GOOGLE.CLIENT_SECRET,
+          callbackURL: config.OAUTH.GOOGLE.CALLBACK_URL || '',
           scope: ['profile', 'email'],
         },
         async (accessToken, refreshToken, profile, done) => {

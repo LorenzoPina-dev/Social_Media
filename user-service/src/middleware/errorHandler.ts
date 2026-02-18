@@ -21,7 +21,7 @@ export function errorHandler(
   err: Error | AppError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _: NextFunction
 ): void {
   logger.error('Error occurred', {
     error: err.message,

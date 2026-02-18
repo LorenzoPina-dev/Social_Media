@@ -1,23 +1,83 @@
 /**
- * Auth Service Unit Tests
+ * AuthService – Unit Tests
+ *
+ * Tutti i mock sono dichiarati prima degli import (jest li hoista).
+ * I test coprono ogni ramo di auth.service.ts.
  */
 
-import { AuthService } from '../../src/services/auth.service';
-import { UserModel } from '../../src/models/user.model';
-import { SessionModel } from '../../src/models/session.model';
-import { JWTService } from '../../src/services/jwt.service';
-import { SessionService } from '../../src/services/session.service';
-import { AuthProducer } from '../../src/kafka/producers/auth.producer';
+// ── mock infrastruttura ────────────────────────────────────────────────────
+jest.mock('../../src/config/database', () => ({ getDatabase: jest.fn(), connectDatabase: jest.fn() }));
+jest.mock('../../src/config/redis',    () => ({ getRedisClient: jest.fn(), connectRedis: jest.fn() }));
+jest.mock('../../src/config/kafka',    () => ({ getKafkaProducer: jest.fn(), connectKafka: jest.fn() }));
+jest.mock('../../src/utils/logger',    () => ({
+  logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+}));
+jest.mock('../../src/utils/metrics', () => ({
+  metrics: { incrementCounter: jest.fn(), recordRequestDuration: jest.fn() },
+}));
 
-// Mock dependencies
+// ── mock modelli e servizi ─────────────────────────────────────────────────
 jest.mock('../../src/models/user.model');
 jest.mock('../../src/models/session.model');
 jest.mock('../../src/services/jwt.service');
 jest.mock('../../src/services/session.service');
 jest.mock('../../src/kafka/producers/auth.producer');
 
+import { AuthService }    from '../../src/services/auth.service';
+import { UserModel }      from '../../src/models/user.model';
+import { SessionModel }   from '../../src/models/session.model';
+import { JWTService }     from '../../src/services/jwt.service';
+import { SessionService } from '../../src/services/session.service';
+import { AuthProducer }   from '../../src/kafka/producers/auth.producer';
+import {
+  User, Session, TokenPair,
+  ConflictError, UnauthorizedError, ValidationError,
+} from '../../src/types';
+
+// ── fixture ────────────────────────────────────────────────────────────────
+const ACTIVE_USER: User = {
+  id:            'uid-001',
+  username:      'johndoe',
+  email:         'john@example.com',
+  password_hash: '$argon2id$v=19$m=65536,t=3,p=4$fakehash',
+  display_name:  'John Doe',
+  verified:      true,
+  mfa_enabled:   false,
+  status:        'ACTIVE',
+  created_at:    new Date('2024-01-01'),
+  updated_at:    new Date('2024-01-01'),
+};
+
+const MOCK_TOKENS: TokenPair = {
+  access_token:  'eyJ.mock.access',
+  refresh_token: 'eyJ.mock.refresh',
+  expires_in:    900,
+};
+
+const MOCK_SESSION: Session = {
+  id:            'sess-001',
+  user_id:       ACTIVE_USER.id,
+  refresh_token: MOCK_TOKENS.refresh_token,
+  created_at:    new Date(),
+  last_activity: new Date(),
+  expires_at:    new Date(Date.now() + 30 * 86_400_000),
+};
+
+const DECODED_TOKEN = {
+  userId:      ACTIVE_USER.id,
+  username:    ACTIVE_USER.username,
+  email:       ACTIVE_USER.email,
+  verified:    true,
+  mfa_enabled: false,
+  iat:         Math.floor(Date.now() / 1000),
+  exp:         Math.floor(Date.now() / 1000) + 900,
+  iss:         'auth-service',
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 describe('AuthService', () => {
-  let authService: AuthService;
+  let service: AuthService;
   let userModel: jest.Mocked<UserModel>;
   let sessionModel: jest.Mocked<SessionModel>;
   let jwtService: jest.Mocked<JWTService>;
@@ -25,276 +85,319 @@ describe('AuthService', () => {
   let authProducer: jest.Mocked<AuthProducer>;
 
   beforeEach(() => {
-    userModel = new UserModel() as jest.Mocked<UserModel>;
-    sessionModel = new SessionModel() as jest.Mocked<SessionModel>;
-    jwtService = new JWTService() as jest.Mocked<JWTService>;
-    sessionService = new SessionService(sessionModel) as jest.Mocked<SessionService>;
-    authProducer = new AuthProducer() as jest.Mocked<AuthProducer>;
-
-    authService = new AuthService(
-      userModel,
-      sessionModel,
-      jwtService,
-      sessionService,
-      authProducer
-    );
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
+
+    userModel      = new UserModel()                  as jest.Mocked<UserModel>;
+    sessionModel   = new SessionModel()               as jest.Mocked<SessionModel>;
+    jwtService     = new JWTService()                 as jest.Mocked<JWTService>;
+    sessionService = new SessionService(sessionModel) as jest.Mocked<SessionService>;
+    authProducer   = new AuthProducer()               as jest.Mocked<AuthProducer>;
+
+    service = new AuthService(
+      userModel, sessionModel, jwtService, sessionService, authProducer,
+    );
+
+    // default stubs
+    jwtService.generateTokenPair.mockResolvedValue(MOCK_TOKENS);
+    sessionService.createSession.mockResolvedValue(MOCK_SESSION);
+    authProducer.publishUserRegistered.mockResolvedValue(undefined);
+    authProducer.publishUserAuthenticated.mockResolvedValue(undefined);
   });
 
+  // ══════════════════════════════════════════════════════════════════════════
   describe('register', () => {
-    const registerData = {
-      username: 'testuser',
-      email: 'test@example.com',
-      password: 'SecurePass123!',
-      display_name: 'Test User',
+    const DTO = {
+      username: 'newuser', email: 'new@example.com',
+      password: 'Secure1!Pass', display_name: 'New User',
     };
 
-    it('should successfully register a new user', async () => {
-      // Mock no existing users
+    beforeEach(() => {
       userModel.findByUsername.mockResolvedValue(null);
       userModel.findByEmail.mockResolvedValue(null);
-
-      // Mock user creation
-      const mockUser = {
-        id: '123',
-        username: registerData.username,
-        email: registerData.email,
-        password_hash: 'hashed',
-        verified: false,
-        mfa_enabled: false,
-        status: 'ACTIVE' as const,
-        created_at: new Date(),
-        updated_at: new Date(),
-      };
-      userModel.create.mockResolvedValue(mockUser);
-
-      // Mock token generation
-      const mockTokens = {
-        access_token: 'access-token',
-        refresh_token: 'refresh-token',
-        expires_in: 900,
-      };
-      jwtService.generateTokenPair.mockResolvedValue(mockTokens);
-
-      // Mock session creation
-      sessionService.createSession.mockResolvedValue({} as any);
-
-      // Mock event publishing
-      authProducer.publishUserRegistered.mockResolvedValue();
-
-      // Execute
-      const result = await authService.register(registerData);
-
-      // Assertions
-      expect(result.user).toBeDefined();
-      expect(result.tokens).toEqual(mockTokens);
-      expect(userModel.findByUsername).toHaveBeenCalledWith(registerData.username);
-      expect(userModel.findByEmail).toHaveBeenCalledWith(registerData.email);
-      expect(userModel.create).toHaveBeenCalledWith(registerData);
-      expect(jwtService.generateTokenPair).toHaveBeenCalled();
-      expect(sessionService.createSession).toHaveBeenCalled();
-      expect(authProducer.publishUserRegistered).toHaveBeenCalled();
+      userModel.create.mockResolvedValue({
+        ...ACTIVE_USER, username: DTO.username, email: DTO.email,
+      });
     });
 
-    it('should throw error if username already exists', async () => {
-      userModel.findByUsername.mockResolvedValue({} as any);
-
-      await expect(authService.register(registerData)).rejects.toThrow('Username already exists');
+    it('restituisce { user, tokens } per dati validi', async () => {
+      const result = await service.register(DTO);
+      expect(result.user.username).toBe(DTO.username);
+      expect(result.tokens).toEqual(MOCK_TOKENS);
     });
 
-    it('should throw error if email already exists', async () => {
-      userModel.findByUsername.mockResolvedValue(null);
-      userModel.findByEmail.mockResolvedValue({} as any);
-
-      await expect(authService.register(registerData)).rejects.toThrow('Email already exists');
+    it('controlla unicità di username e email', async () => {
+      await service.register(DTO);
+      expect(userModel.findByUsername).toHaveBeenCalledWith(DTO.username);
+      expect(userModel.findByEmail).toHaveBeenCalledWith(DTO.email);
     });
 
-    it('should throw error for weak password', async () => {
-      userModel.findByUsername.mockResolvedValue(null);
-      userModel.findByEmail.mockResolvedValue(null);
+    it('chiama userModel.create con il DTO ricevuto', async () => {
+      await service.register(DTO);
+      expect(userModel.create).toHaveBeenCalledWith(DTO);
+    });
 
-      const weakPasswordData = { ...registerData, password: 'weak' };
+    it('chiama generateTokenPair con i dati dell\'utente creato', async () => {
+      await service.register(DTO);
+      expect(jwtService.generateTokenPair).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: ACTIVE_USER.id }),
+      );
+    });
 
-      await expect(authService.register(weakPasswordData)).rejects.toThrow();
+    it('chiama createSession con il refresh_token', async () => {
+      await service.register(DTO);
+      expect(sessionService.createSession).toHaveBeenCalledWith(
+        expect.any(String),
+        MOCK_TOKENS.refresh_token,
+      );
+    });
+
+    it('pubblica evento user_registered con type corretto', async () => {
+      await service.register(DTO);
+      expect(authProducer.publishUserRegistered).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type:     'user_registered',
+          username: DTO.username,
+          email:    DTO.email,
+        }),
+      );
+    });
+
+    // ── ConflictError ────────────────────────────────────────────────────────
+    it('lancia ConflictError se username già esistente', async () => {
+      userModel.findByUsername.mockResolvedValue(ACTIVE_USER);
+      await expect(service.register(DTO)).rejects.toBeInstanceOf(ConflictError);
+    });
+
+    it('lancia ConflictError se email già esistente', async () => {
+      userModel.findByEmail.mockResolvedValue(ACTIVE_USER);
+      await expect(service.register(DTO)).rejects.toBeInstanceOf(ConflictError);
+    });
+
+    it('non chiama create quando username è duplicato', async () => {
+      userModel.findByUsername.mockResolvedValue(ACTIVE_USER);
+      await expect(service.register(DTO)).rejects.toThrow();
+      expect(userModel.create).not.toHaveBeenCalled();
+    });
+
+    // ── ValidationError — password ───────────────────────────────────────────
+    it('lancia ValidationError: password < 8 caratteri', async () => {
+      await expect(
+        service.register({ ...DTO, password: 'Ab1!' })
+      ).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it('lancia ValidationError: nessuna maiuscola', async () => {
+      await expect(
+        service.register({ ...DTO, password: 'secure1!pass' })
+      ).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it('lancia ValidationError: nessuna minuscola', async () => {
+      await expect(
+        service.register({ ...DTO, password: 'SECURE1!PASS' })
+      ).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it('lancia ValidationError: nessun numero', async () => {
+      await expect(
+        service.register({ ...DTO, password: 'SecurePass!' })
+      ).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it('lancia ValidationError: nessun carattere speciale', async () => {
+      await expect(
+        service.register({ ...DTO, password: 'Secure1Pass' })
+      ).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it('non chiama create se la password è debole', async () => {
+      await expect(service.register({ ...DTO, password: 'weak' })).rejects.toThrow();
+      expect(userModel.create).not.toHaveBeenCalled();
     });
   });
 
+  // ══════════════════════════════════════════════════════════════════════════
   describe('login', () => {
-    const loginData = {
-      username: 'testuser',
-      password: 'SecurePass123!',
+    const DTO = { username: 'johndoe', password: 'Secure1!Pass' };
+
+    beforeEach(() => {
+      userModel.findByUsername.mockResolvedValue(ACTIVE_USER);
+      userModel.verifyPassword.mockResolvedValue(true);
+    });
+
+    it('restituisce { user, tokens } per credenziali corrette', async () => {
+      const result = await service.login(DTO);
+      expect(result.user.id).toBe(ACTIVE_USER.id);
+      expect(result.tokens).toEqual(MOCK_TOKENS);
+      expect(result.mfa_required).toBeUndefined();
+    });
+
+    it('passa ipAddress e deviceInfo a createSession', async () => {
+      await service.login(DTO, '10.0.0.1', 'Mozilla/5.0');
+      expect(sessionService.createSession).toHaveBeenCalledWith(
+        ACTIVE_USER.id, MOCK_TOKENS.refresh_token, '10.0.0.1', 'Mozilla/5.0',
+      );
+    });
+
+    it('pubblica evento user_authenticated', async () => {
+      await service.login(DTO);
+      expect(authProducer.publishUserAuthenticated).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'user_authenticated', userId: ACTIVE_USER.id }),
+      );
+    });
+
+    it('lancia UnauthorizedError se utente non trovato', async () => {
+      userModel.findByUsername.mockResolvedValue(null);
+      await expect(service.login(DTO)).rejects.toBeInstanceOf(UnauthorizedError);
+    });
+
+    it('lancia UnauthorizedError per password errata', async () => {
+      userModel.verifyPassword.mockResolvedValue(false);
+      await expect(service.login(DTO)).rejects.toBeInstanceOf(UnauthorizedError);
+    });
+
+    it('non genera token se la password è errata', async () => {
+      userModel.verifyPassword.mockResolvedValue(false);
+      await expect(service.login(DTO)).rejects.toThrow();
+      expect(jwtService.generateTokenPair).not.toHaveBeenCalled();
+    });
+
+    it('lancia UnauthorizedError per account SUSPENDED', async () => {
+      userModel.findByUsername.mockResolvedValue({ ...ACTIVE_USER, status: 'SUSPENDED' });
+      await expect(service.login(DTO)).rejects.toBeInstanceOf(UnauthorizedError);
+    });
+
+    // ── MFA ──────────────────────────────────────────────────────────────────
+    it('restituisce mfa_required:true se MFA abilitato e codice non fornito', async () => {
+      userModel.findByUsername.mockResolvedValue({
+        ...ACTIVE_USER, mfa_enabled: true, mfa_secret: 'SECRET',
+      });
+      const result = await service.login(DTO);
+
+      expect(result.mfa_required).toBe(true);
+      expect(result.tokens.access_token).toBe('');
+      expect(result.tokens.refresh_token).toBe('');
+      expect(result.tokens.expires_in).toBe(0);
+    });
+
+    it('lancia UnauthorizedError per mfa_code errato', async () => {
+      userModel.findByUsername.mockResolvedValue({
+        ...ACTIVE_USER, mfa_enabled: true, mfa_secret: 'SECRET',
+      });
+      service.setMFAService({ verifyMFAToken: jest.fn().mockResolvedValue(false) } as any);
+
+      await expect(
+        service.login({ ...DTO, mfa_code: '000000' })
+      ).rejects.toBeInstanceOf(UnauthorizedError);
+    });
+
+    it('completa il login con mfa_code corretto', async () => {
+      userModel.findByUsername.mockResolvedValue({
+        ...ACTIVE_USER, mfa_enabled: true, mfa_secret: 'SECRET',
+      });
+      service.setMFAService({ verifyMFAToken: jest.fn().mockResolvedValue(true) } as any);
+
+      const result = await service.login({ ...DTO, mfa_code: '123456' });
+      expect(result.tokens.access_token).toBe(MOCK_TOKENS.access_token);
+      expect(result.mfa_required).toBeUndefined();
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  describe('refreshToken', () => {
+    const NEW_TOKENS: TokenPair = {
+      access_token: 'new.access', refresh_token: 'new.refresh', expires_in: 900,
     };
 
-    it('should successfully login a user', async () => {
-      // Mock user
-      const mockUser = {
-        id: '123',
-        username: loginData.username,
-        email: 'test@example.com',
-        password_hash: 'hashed',
-        verified: true,
-        mfa_enabled: false,
-        status: 'ACTIVE' as const,
-        created_at: new Date(),
-        updated_at: new Date(),
-      };
-      userModel.findByUsername.mockResolvedValue(mockUser);
-      userModel.verifyPassword.mockResolvedValue(true);
-
-      // Mock token generation
-      const mockTokens = {
-        access_token: 'access-token',
-        refresh_token: 'refresh-token',
-        expires_in: 900,
-      };
-      jwtService.generateTokenPair.mockResolvedValue(mockTokens);
-
-      // Mock session creation
-      sessionService.createSession.mockResolvedValue({} as any);
-
-      // Mock event publishing
-      authProducer.publishUserAuthenticated.mockResolvedValue();
-
-      // Execute
-      const result = await authService.login(loginData);
-
-      // Assertions
-      expect(result.user).toBeDefined();
-      expect(result.tokens).toEqual(mockTokens);
-      expect(userModel.findByUsername).toHaveBeenCalledWith(loginData.username);
-      expect(userModel.verifyPassword).toHaveBeenCalledWith(mockUser, loginData.password);
-      expect(jwtService.generateTokenPair).toHaveBeenCalled();
-      expect(sessionService.createSession).toHaveBeenCalled();
-      expect(authProducer.publishUserAuthenticated).toHaveBeenCalled();
+    beforeEach(() => {
+      jwtService.verifyRefreshToken.mockResolvedValue(DECODED_TOKEN as any);
+      sessionModel.findByRefreshToken.mockResolvedValue(MOCK_SESSION);
+      sessionModel.updateActivity.mockResolvedValue(undefined);
+      sessionModel.delete.mockResolvedValue(undefined);
+      userModel.findById.mockResolvedValue(ACTIVE_USER);
+      jwtService.generateTokenPair.mockResolvedValue(NEW_TOKENS);
     });
 
-    it('should throw error for non-existent user', async () => {
-      userModel.findByUsername.mockResolvedValue(null);
-
-      await expect(authService.login(loginData)).rejects.toThrow('Invalid credentials');
+    it('restituisce una nuova coppia di token', async () => {
+      const result = await service.refreshToken(MOCK_TOKENS.refresh_token);
+      expect(result).toEqual(NEW_TOKENS);
     });
 
-    it('should throw error for invalid password', async () => {
-      const mockUser = {
-        id: '123',
-        username: loginData.username,
-        password_hash: 'hashed',
-      } as any;
-      userModel.findByUsername.mockResolvedValue(mockUser);
-      userModel.verifyPassword.mockResolvedValue(false);
-
-      await expect(authService.login(loginData)).rejects.toThrow('Invalid credentials');
+    it('chiama verifyRefreshToken con il token corretto', async () => {
+      await service.refreshToken(MOCK_TOKENS.refresh_token);
+      expect(jwtService.verifyRefreshToken).toHaveBeenCalledWith(MOCK_TOKENS.refresh_token);
     });
 
-    it('should throw error for suspended user', async () => {
-      const mockUser = {
-        id: '123',
-        username: loginData.username,
-        password_hash: 'hashed',
-        status: 'SUSPENDED' as const,
-      } as any;
-      userModel.findByUsername.mockResolvedValue(mockUser);
-      userModel.verifyPassword.mockResolvedValue(true);
-
-      await expect(authService.login(loginData)).rejects.toThrow('Account suspended');
-    });
-  });
-
-  describe('refreshToken', () => {
-    it('should successfully refresh token', async () => {
-      const refreshToken = 'old-refresh-token';
-
-      // Mock token verification
-      const mockDecoded = {
-        userId: '123',
-        username: 'testuser',
-        email: 'test@example.com',
-        verified: true,
-        mfa_enabled: false,
-        iat: Date.now(),
-        exp: Date.now() + 3600,
-        iss: 'auth-service',
-      };
-      jwtService.verifyRefreshToken.mockResolvedValue(mockDecoded);
-
-      // Mock session
-      const mockSession = {
-        id: 'session-123',
-        user_id: '123',
-        refresh_token: refreshToken,
-      } as any;
-      sessionModel.findByRefreshToken.mockResolvedValue(mockSession);
-      sessionModel.updateActivity.mockResolvedValue();
-      sessionModel.delete.mockResolvedValue();
-
-      // Mock user
-      const mockUser = {
-        id: '123',
-        username: 'testuser',
-        email: 'test@example.com',
-      } as any;
-      userModel.findById.mockResolvedValue(mockUser);
-
-      // Mock new tokens
-      const mockTokens = {
-        access_token: 'new-access-token',
-        refresh_token: 'new-refresh-token',
-        expires_in: 900,
-      };
-      jwtService.generateTokenPair.mockResolvedValue(mockTokens);
-      sessionService.createSession.mockResolvedValue({} as any);
-
-      // Execute
-      const result = await authService.refreshToken(refreshToken);
-
-      // Assertions
-      expect(result).toEqual(mockTokens);
-      expect(jwtService.verifyRefreshToken).toHaveBeenCalledWith(refreshToken);
-      expect(sessionModel.findByRefreshToken).toHaveBeenCalledWith(refreshToken);
-      expect(userModel.findById).toHaveBeenCalledWith('123');
-      expect(jwtService.generateTokenPair).toHaveBeenCalled();
+    it('aggiorna l\'attività della sessione', async () => {
+      await service.refreshToken(MOCK_TOKENS.refresh_token);
+      expect(sessionModel.updateActivity).toHaveBeenCalledWith(MOCK_SESSION.id);
     });
 
-    it('should throw error for invalid session', async () => {
-      const refreshToken = 'invalid-refresh-token';
+    it('ruota la sessione: elimina la vecchia e crea una nuova', async () => {
+      await service.refreshToken(MOCK_TOKENS.refresh_token);
+      expect(sessionModel.delete).toHaveBeenCalledWith(MOCK_SESSION.id);
+      expect(sessionService.createSession).toHaveBeenCalledTimes(1);
+    });
 
-      jwtService.verifyRefreshToken.mockResolvedValue({} as any);
+    it('lancia UnauthorizedError se la sessione non esiste', async () => {
       sessionModel.findByRefreshToken.mockResolvedValue(null);
+      await expect(
+        service.refreshToken(MOCK_TOKENS.refresh_token)
+      ).rejects.toBeInstanceOf(UnauthorizedError);
+    });
 
-      await expect(authService.refreshToken(refreshToken)).rejects.toThrow('Invalid refresh token');
+    it('lancia UnauthorizedError se il token JWT è invalido', async () => {
+      jwtService.verifyRefreshToken.mockRejectedValue(
+        new UnauthorizedError('Invalid refresh token')
+      );
+      await expect(service.refreshToken('bad-token')).rejects.toBeInstanceOf(UnauthorizedError);
+    });
+
+    it('lancia UnauthorizedError se l\'utente non esiste più nel DB', async () => {
+      userModel.findById.mockResolvedValue(null);
+      await expect(
+        service.refreshToken(MOCK_TOKENS.refresh_token)
+      ).rejects.toBeInstanceOf(UnauthorizedError);
     });
   });
 
+  // ══════════════════════════════════════════════════════════════════════════
   describe('logout', () => {
-    it('should successfully logout user', async () => {
-      const refreshToken = 'refresh-token';
-      const mockSession = {
-        id: 'session-123',
-        user_id: '123',
-      } as any;
+    it('elimina la sessione corrispondente al refresh token', async () => {
+      sessionModel.findByRefreshToken.mockResolvedValue(MOCK_SESSION);
+      sessionModel.delete.mockResolvedValue(undefined);
 
-      sessionModel.findByRefreshToken.mockResolvedValue(mockSession);
-      sessionModel.delete.mockResolvedValue();
+      await service.logout(MOCK_TOKENS.refresh_token);
 
-      await authService.logout(refreshToken);
+      expect(sessionModel.findByRefreshToken).toHaveBeenCalledWith(MOCK_TOKENS.refresh_token);
+      expect(sessionModel.delete).toHaveBeenCalledWith(MOCK_SESSION.id);
+    });
 
-      expect(sessionModel.findByRefreshToken).toHaveBeenCalledWith(refreshToken);
-      expect(sessionModel.delete).toHaveBeenCalledWith(mockSession.id);
+    it('non lancia errore se la sessione non esiste (già scollegato)', async () => {
+      sessionModel.findByRefreshToken.mockResolvedValue(null);
+      await expect(service.logout('stale-token')).resolves.not.toThrow();
+      expect(sessionModel.delete).not.toHaveBeenCalled();
+    });
+
+    it('rilancia errori DB durante la ricerca della sessione', async () => {
+      sessionModel.findByRefreshToken.mockRejectedValue(new Error('DB error'));
+      await expect(service.logout(MOCK_TOKENS.refresh_token)).rejects.toThrow('DB error');
     });
   });
 
+  // ══════════════════════════════════════════════════════════════════════════
   describe('logoutAll', () => {
-    it('should successfully logout all sessions', async () => {
-      const userId = '123';
+    it('elimina tutte le sessioni dell\'utente', async () => {
+      sessionModel.deleteAllForUser.mockResolvedValue(undefined);
 
-      sessionModel.deleteAllForUser.mockResolvedValue();
+      await service.logoutAll(ACTIVE_USER.id);
 
-      await authService.logoutAll(userId);
+      expect(sessionModel.deleteAllForUser).toHaveBeenCalledWith(ACTIVE_USER.id);
+    });
 
-      expect(sessionModel.deleteAllForUser).toHaveBeenCalledWith(userId);
+    it('rilancia errori DB', async () => {
+      sessionModel.deleteAllForUser.mockRejectedValue(new Error('DB down'));
+      await expect(service.logoutAll(ACTIVE_USER.id)).rejects.toThrow('DB down');
     });
   });
 });

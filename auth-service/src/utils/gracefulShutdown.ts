@@ -1,6 +1,6 @@
 /**
- * Graceful Shutdown Utility
- * Handles clean shutdown of the service
+ * Graceful Shutdown Handler
+ * Ensures clean shutdown of all connections
  */
 
 import { Server } from 'http';
@@ -15,62 +15,43 @@ let isShuttingDown = false;
  * Setup graceful shutdown handlers
  */
 export function setupGracefulShutdown(server: Server): void {
-  // Handle SIGTERM
-  process.on('SIGTERM', async () => {
-    await gracefulShutdown(server, 'SIGTERM');
-  });
-
-  // Handle SIGINT (Ctrl+C)
-  process.on('SIGINT', async () => {
-    await gracefulShutdown(server, 'SIGINT');
-  });
-
-  logger.info('Graceful shutdown handlers registered');
-}
-
-/**
- * Perform graceful shutdown
- */
-async function gracefulShutdown(server: Server, signal: string): Promise<void> {
-  if (isShuttingDown) {
-    logger.warn('Shutdown already in progress');
-    return;
-  }
-
-  isShuttingDown = true;
-  logger.info(`Received ${signal}, starting graceful shutdown...`);
-
-  // Stop accepting new connections
-  server.close((err) => {
-    if (err) {
-      logger.error('Error closing HTTP server', { error: err });
-    } else {
-      logger.info('HTTP server closed');
+  const shutdown = async (signal: string) => {
+    if (isShuttingDown) {
+      logger.warn('Shutdown already in progress');
+      return;
     }
-  });
 
-  try {
-    // Disconnect from infrastructure in parallel
-    logger.info('Closing infrastructure connections...');
-    
-    await Promise.all([
-      disconnectDatabase().catch(error => {
-        logger.error('Error disconnecting from database', { error });
-      }),
-      disconnectRedis().catch(error => {
-        logger.error('Error disconnecting from Redis', { error });
-      }),
-      disconnectKafka().catch(error => {
-        logger.error('Error disconnecting from Kafka', { error });
-      }),
-    ]);
+    isShuttingDown = true;
+    logger.info(`${signal} received, starting graceful shutdown...`);
 
-    logger.info('✅ All connections closed successfully');
-    logger.info('👋 Shutdown complete');
+    // Stop accepting new connections
+    server.close(async () => {
+      logger.info('HTTP server closed');
 
-    process.exit(0);
-  } catch (error) {
-    logger.error('Error during shutdown', { error });
-    process.exit(1);
-  }
+      try {
+        // Close all connections
+        await Promise.all([
+          disconnectDatabase(),
+          disconnectRedis(),
+          disconnectKafka(),
+        ]);
+
+        logger.info('✅ All connections closed successfully');
+        process.exit(0);
+      } catch (error) {
+        logger.error('❌ Error during shutdown', { error });
+        process.exit(1);
+      }
+    });
+
+    // Force shutdown after 30 seconds
+    setTimeout(() => {
+      logger.error('❌ Forceful shutdown after timeout');
+      process.exit(1);
+    }, 30000);
+  };
+
+  // Handle shutdown signals
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }

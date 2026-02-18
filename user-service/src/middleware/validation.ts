@@ -1,6 +1,6 @@
 /**
  * Validation Middleware
- * Request validation using Joi
+ * Request body validation using Joi
  */
 
 import { Request, Response, NextFunction } from 'express';
@@ -8,9 +8,9 @@ import Joi from 'joi';
 import { logger } from '../utils/logger';
 
 /**
- * Validate request body
+ * Validate request body against Joi schema
  */
-export function validateBody(schema: Joi.ObjectSchema) {
+export function validateBody(schema: Joi.Schema) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const { error, value } = schema.validate(req.body, {
       abortEarly: false,
@@ -23,24 +23,27 @@ export function validateBody(schema: Joi.ObjectSchema) {
         message: detail.message,
       }));
 
-      logger.warn('Validation error', { errors, body: req.body });
+      logger.warn('Validation failed', { errors, body: req.body });
 
       res.status(400).json({
-        error: 'Validation error',
+        success: false,
+        error: 'Validation failed',
+        code: 'VALIDATION_ERROR',
         details: errors,
       });
       return;
     }
 
+    // Replace req.body with validated value
     req.body = value;
     next();
   };
 }
 
 /**
- * Validate request query parameters
+ * Validate request query parameters against Joi schema
  */
-export function validateQuery(schema: Joi.ObjectSchema) {
+export function validateQuery(schema: Joi.Schema) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const { error, value } = schema.validate(req.query, {
       abortEarly: false,
@@ -53,10 +56,12 @@ export function validateQuery(schema: Joi.ObjectSchema) {
         message: detail.message,
       }));
 
-      logger.warn('Query validation error', { errors, query: req.query });
+      logger.warn('Query validation failed', { errors, query: req.query });
 
       res.status(400).json({
-        error: 'Validation error',
+        success: false,
+        error: 'Validation failed',
+        code: 'VALIDATION_ERROR',
         details: errors,
       });
       return;
@@ -68,12 +73,13 @@ export function validateQuery(schema: Joi.ObjectSchema) {
 }
 
 /**
- * Validate request params
+ * Validate request params against Joi schema
  */
-export function validateParams(schema: Joi.ObjectSchema) {
+export function validateParams(schema: Joi.Schema) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const { error, value } = schema.validate(req.params, {
       abortEarly: false,
+      stripUnknown: true,
     });
 
     if (error) {
@@ -82,10 +88,12 @@ export function validateParams(schema: Joi.ObjectSchema) {
         message: detail.message,
       }));
 
-      logger.warn('Params validation error', { errors, params: req.params });
+      logger.warn('Params validation failed', { errors, params: req.params });
 
       res.status(400).json({
-        error: 'Validation error',
+        success: false,
+        error: 'Validation failed',
+        code: 'VALIDATION_ERROR',
         details: errors,
       });
       return;
@@ -95,25 +103,3 @@ export function validateParams(schema: Joi.ObjectSchema) {
     next();
   };
 }
-
-// Common validation schemas
-export const schemas = {
-  uuid: Joi.string().uuid().required(),
-  
-  updateUser: Joi.object({
-    display_name: Joi.string().min(1).max(50).optional(),
-    bio: Joi.string().max(500).allow('').optional(),
-    avatar_url: Joi.string().uri().optional(),
-  }),
-
-  searchQuery: Joi.object({
-    q: Joi.string().min(1).max(100).required(),
-    verified: Joi.boolean().optional(),
-    limit: Joi.number().integer().min(1).max(100).optional(),
-    offset: Joi.number().integer().min(0).optional(),
-  }),
-
-  userIds: Joi.object({
-    ids: Joi.array().items(Joi.string().uuid()).min(1).max(100).required(),
-  }),
-};

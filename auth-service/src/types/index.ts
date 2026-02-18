@@ -165,17 +165,12 @@ export interface AuthResponse {
   code?: string;
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
   code?: string;
 }
-
-// ============================================================================
-// REQUEST TYPES
-// ============================================================================
-// Request types are extended in express.d.ts using module augmentation
 
 // ============================================================================
 // EVENT TYPES (for Kafka)
@@ -278,23 +273,5 @@ export class TooManyRequestsError extends AuthError {
   constructor(message: string = 'Too many requests') {
     super('TOO_MANY_REQUESTS', message, 429);
     this.name = 'TooManyRequestsError';
-  }
-}
-
-// ============================================================================
-// EXPRESS TYPE EXTENSIONS
-// ============================================================================
-
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        username: string;
-        email: string;
-        verified: boolean;
-        mfa_enabled: boolean;
-      };
-    }
   }
 }
