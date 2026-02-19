@@ -27,27 +27,17 @@ module.exports = {
   },
   coverageReporters: ['text', 'lcov', 'html'],
 
-  // ─── ts-jest ──────────────────────────────────────────────────────────────
-  globals: {
-    'ts-jest': {
-      tsconfig: {
-        strict: true,
-        esModuleInterop: true,
-      },
-    },
-  },
-
   testTimeout: 15000,
+
+  // Run test suites serially — integration and e2e both use the same test DB;
+  // concurrent TRUNCATE calls across suites corrupt each other's state.
+  maxWorkers: 1,
 
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
 
   // ─── Projects ─────────────────────────────────────────────────────────────
-  // BUG 8 FIX: rimosso il `setupFiles` a livello root che era ridondante
-  // (ogni progetto lo dichiara già esplicitamente).
-  // Usato setupFiles (non setupFilesAfterFramework — chiave inesistente).
-
   projects: [
     {
       displayName: 'unit',
@@ -56,8 +46,8 @@ module.exports = {
       setupFiles:  ['<rootDir>/tests/setup.ts'],
       preset:      'ts-jest',
       testEnvironment: 'node',
-      globals: {
-        'ts-jest': { tsconfig: { strict: true, esModuleInterop: true } },
+      transform: {
+        '^.+\\.tsx?$': ['ts-jest', { tsconfig: { strict: true, esModuleInterop: true } }],
       },
     },
     {
@@ -67,8 +57,8 @@ module.exports = {
       preset:      'ts-jest',
       testEnvironment: 'node',
       testTimeout: 30000,
-      globals: {
-        'ts-jest': { tsconfig: { strict: true, esModuleInterop: true } },
+      transform: {
+        '^.+\\.tsx?$': ['ts-jest', { tsconfig: { strict: true, esModuleInterop: true } }],
       },
     },
     {
@@ -81,8 +71,8 @@ module.exports = {
       preset:      'ts-jest',
       testEnvironment: 'node',
       testTimeout: 45000,
-      globals: {
-        'ts-jest': { tsconfig: { strict: true, esModuleInterop: true } },
+      transform: {
+        '^.+\\.tsx?$': ['ts-jest', { tsconfig: { strict: true, esModuleInterop: true } }],
       },
     },
   ],

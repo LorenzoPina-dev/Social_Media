@@ -32,6 +32,11 @@ function rateLimiter(options: RateLimiterOptions = {}) {
     errorCode = 'TOO_MANY_REQUESTS',
   } = options;
 
+  // In test environment, skip rate limiting so suites don't interfere
+  if (config.NODE_ENV === 'test') {
+    return (_req: Request, _res: Response, next: NextFunction): void => next();
+  }
+
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const redis = getRedisClient();

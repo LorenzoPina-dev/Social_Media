@@ -48,13 +48,16 @@ let app: Application;
 let db: Knex;
 let scheduler: SchedulerService;
 
-const userA = { id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', token: '' };
-const userB = { id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', token: '' };
+const userA = {
+  id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  token: makeToken('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'usera'),
+};
+const userB = {
+  id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+  token: makeToken('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'userb'),
+};
 
 beforeAll(async () => {
-  userA.token = makeToken(userA.id, 'userA');
-  userB.token = makeToken(userB.id, 'userB');
-
   db = knex({
     client: 'postgresql',
     connection:
@@ -64,21 +67,30 @@ beforeAll(async () => {
     migrations: { directory: './migrations', extension: 'ts' },
   });
 
+  // Migrazioni una sola volta
   await db.migrate.latest();
+
   const result = await createApp();
   app = result.app;
   scheduler = result.scheduler;
 }, 30000);
 
+beforeEach(async () => {
+  await db.raw(`
+    TRUNCATE post_edit_history, post_hashtags, hashtags, posts CASCADE
+  `);
+});
+
 afterAll(async () => {
-  scheduler?.stop(); // BUG 7 FIX: stoppa il setInterval del scheduler
-  await db.migrate.rollback(undefined, true);
+  // Stop scheduler e tutti i timer
+  if (scheduler) {
+    scheduler.stop(); // già presente
+  }
+
+  // Chiudi tutte le connessioni DB
   await db.destroy();
 }, 30000);
 
-beforeEach(async () => {
-  await db.raw('TRUNCATE post_edit_history, post_hashtags, hashtags, posts CASCADE');
-});
 
 // ─── E2E Flows ────────────────────────────────────────────────────────────────
 
@@ -151,8 +163,10 @@ describe('Flow 2: Privacy — PRIVATE post access control', () => {
     expect(ownerRes.status).toBe(200);
 
     // 3. Unauthenticated user cannot read it
+    // GET /posts/:id uses optionalAuth (never 401); PRIVATE posts return 403 for everyone
+    // without ownership — including unauthenticated users.
     const anonRes = await request(app).get(`/api/v1/posts/${postId}`);
-    expect(anonRes.status).toBe(401);
+    expect(anonRes.status).toBe(403);
 
     // 4. Another authenticated user cannot read it
     const otherRes = await request(app)
@@ -357,7 +371,7 @@ describe('Flow 8: Visibility change', () => {
 
     // Now only owner can see it
     const afterAnonRes = await request(app).get(`/api/v1/posts/${postId}`);
-    expect(afterAnonRes.status).toBe(401);
+    expect(afterAnonRes.status).toBe(403);
 
     const afterOwnerRes = await request(app)
       .get(`/api/v1/posts/${postId}`)

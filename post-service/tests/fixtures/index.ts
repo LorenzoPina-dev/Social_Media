@@ -33,6 +33,7 @@ export const createMockHashtag = (overrides?: Partial<Hashtag>): Hashtag => ({
   tag: 'testtag',
   post_count: 1,
   created_at: new Date(),
+  updated_at: new Date(),
   ...overrides,
 });
 

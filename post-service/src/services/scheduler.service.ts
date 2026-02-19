@@ -1,7 +1,7 @@
 /**
  * Scheduler Service — pubblica i post schedulati (cron ogni 60s)
  *
- * Fix: la cron expression */60 nei secondi (campo 1 di 6) è tecnicamente
+ * Fix: la cron expression *60 nei secondi (campo 1 di 6) è tecnicamente
  * invalida perché il range dei secondi è 0-59. Sostituito con
  * setInterval() che è più affidabile e leggibile per questo use case.
  */

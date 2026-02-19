@@ -33,6 +33,7 @@ export interface Hashtag {
   tag: string;
   post_count: number;
   created_at: Date;
+  updated_at: Date;
 }
 
 export interface PostHashtag {
@@ -89,48 +90,56 @@ export class AppError extends Error {
 export class ValidationError extends AppError {
   constructor(message: string) {
     super(400, 'VALIDATION_ERROR', message);
+    Object.setPrototypeOf(this, ValidationError.prototype);
   }
 }
 
 export class UnauthorizedError extends AppError {
   constructor(message = 'Unauthorized') {
     super(401, 'UNAUTHORIZED', message);
+    Object.setPrototypeOf(this, UnauthorizedError.prototype);
   }
 }
 
 export class ForbiddenError extends AppError {
   constructor(message = 'Forbidden') {
     super(403, 'FORBIDDEN', message);
+    Object.setPrototypeOf(this, ForbiddenError.prototype);
   }
 }
 
 export class NotFoundError extends AppError {
   constructor(message: string) {
     super(404, 'NOT_FOUND', message);
+    Object.setPrototypeOf(this, NotFoundError.prototype);
   }
 }
 
 export class ConflictError extends AppError {
   constructor(message: string) {
     super(409, 'CONFLICT', message);
+    Object.setPrototypeOf(this, ConflictError.prototype);
   }
 }
 
 export class TooManyRequestsError extends AppError {
   constructor() {
     super(429, 'TOO_MANY_REQUESTS', 'Rate limit exceeded');
+    Object.setPrototypeOf(this, TooManyRequestsError.prototype);
   }
 }
 
 export class PostNotFoundError extends NotFoundError {
   constructor(id: string) {
     super(`Post ${id} not found`);
+    Object.setPrototypeOf(this, PostNotFoundError.prototype);
   }
 }
 
 export class PostForbiddenError extends ForbiddenError {
   constructor() {
     super('You do not have permission to access or modify this post');
+    Object.setPrototypeOf(this, PostForbiddenError.prototype);
   }
 }
 
@@ -193,4 +202,8 @@ export interface PaginatedPostsResponse {
   data: Post[];
   cursor?: string;
   hasMore: boolean;
+  pagination: {
+    hasMore: boolean;
+    cursor?: string;
+  };
 }

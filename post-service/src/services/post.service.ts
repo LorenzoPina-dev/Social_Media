@@ -166,7 +166,13 @@ export class PostService {
       ).toString('base64');
     }
 
-    return { success: true, data, cursor: nextCursor, hasMore };
+    return {
+      success: true,
+      data,
+      cursor: nextCursor,
+      hasMore,
+      pagination: { hasMore, cursor: nextCursor },
+    };
   }
 
   // ─── UPDATE ───────────────────────────────────────────────────────────────
@@ -240,9 +246,11 @@ export class PostService {
   }
 
   async getEditHistory(postId: string, requesterId: string): Promise<unknown[]> {
-    // getPost già lancia PostNotFoundError se non esiste e
-    // PostForbiddenError se non visibile — il check ridondante è rimosso
-    await this.getPost(postId, requesterId);
+    const post = await this.getPost(postId, requesterId);
+    // Edit history is owner-only — even if the post is PUBLIC
+    if (post.user_id !== requesterId) {
+      throw new PostForbiddenError();
+    }
     return this.editHistoryModel.findByPostId(postId);
   }
 }

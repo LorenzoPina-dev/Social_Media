@@ -22,7 +22,7 @@ export class HashtagModel {
         inserted.push({ ...existing, post_count: existing.post_count + 1 });
       } else {
         const [created] = await db(this.hashtagsTable)
-          .insert({ tag, post_count: 1, created_at: new Date() })
+          .insert({ tag, post_count: 1, created_at: new Date(), updated_at: new Date() })
           .returning('*');
         inserted.push(created as Hashtag);
       }
