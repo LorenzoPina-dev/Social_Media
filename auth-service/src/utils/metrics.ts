@@ -8,13 +8,18 @@ import client from 'prom-client';
 import { config } from '../config';
 import { logger } from './logger';
 
-// Create registry
+// ── Registry isolato ──────────────────────────────────────────────────────────
+// Usiamo un registry dedicato (non il default globale) per evitare conflitti
+// quando il modulo viene richiesto più volte nello stesso processo.
+// register.clear() garantisce che su ogni re-require (ts-node watch, Jest)
+// le metriche vengano ri-registrate su un registry pulito senza errori
+// "A metric with that name has already been registered".
 const register = new client.Registry();
-
-// Add default metrics
+register.clear();
 client.collectDefaultMetrics({ register });
 
-// Custom metrics
+// ── Custom metrics ────────────────────────────────────────────────────────────
+
 const httpRequestDuration = new client.Histogram({
   name: 'http_request_duration_seconds',
   help: 'Duration of HTTP requests in seconds',
@@ -64,12 +69,14 @@ const activeSessions = new client.Gauge({
   registers: [register],
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * Metrics utility class
+ * Metrics utility
  */
 class Metrics {
   /**
-   * Record HTTP request duration
+   * Record HTTP request duration (duration in ms)
    */
   recordRequestDuration(
     _: string,
@@ -80,7 +87,7 @@ class Metrics {
   }
 
   /**
-   * Increment counter
+   * Increment a named counter
    */
   incrementCounter(
     metric: string,
@@ -115,10 +122,16 @@ class Metrics {
         authTokenRefreshes.inc({ status: 'failed' });
         break;
       case 'auth_logout_success':
-        // No specific metric for logout success
-        break;
       case 'auth_logout_all_success':
-        // No specific metric for logout all success
+      case 'mfa_setup_initiated':
+      case 'mfa_enabled_success':
+      case 'mfa_verification_failed':
+      case 'mfa_login_success':
+      case 'mfa_login_failed':
+      case 'mfa_backup_code_used':
+      case 'mfa_disabled':
+      case 'mfa_backup_codes_regenerated':
+        // Counters acknowledged but not yet exposed as separate metrics
         break;
       default:
         logger.warn('Unknown metric', { metric });
@@ -139,17 +152,17 @@ class Metrics {
   }
 
   /**
-   * Get metrics for Prometheus
+   * Get metrics in Prometheus text format
    */
   async getMetrics(): Promise<string> {
-    return await register.metrics();
+    return register.metrics();
   }
 }
 
 export const metrics = new Metrics();
 
 /**
- * Start metrics server
+ * Start standalone metrics HTTP server on METRICS_PORT
  */
 export function startMetricsServer(): void {
   const app = express();
@@ -157,8 +170,7 @@ export function startMetricsServer(): void {
   app.get(config.METRICS.PATH, async (_, res) => {
     try {
       res.set('Content-Type', register.contentType);
-      const metricsData = await metrics.getMetrics();
-      res.end(metricsData);
+      res.end(await metrics.getMetrics());
     } catch (error) {
       res.status(500).end(error);
     }
@@ -166,7 +178,7 @@ export function startMetricsServer(): void {
 
   app.listen(config.METRICS.PORT, () => {
     logger.info(`📊 Metrics server listening on port ${config.METRICS.PORT}`);
-    logger.info(`📈 Metrics available at http://localhost:${config.METRICS.PORT}${config.METRICS.PATH}`);
+    logger.info(`📈 Metrics at http://localhost:${config.METRICS.PORT}${config.METRICS.PATH}`);
   });
 }
 

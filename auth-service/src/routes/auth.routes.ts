@@ -5,12 +5,10 @@
 
 import { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller';
+import { requireAuth } from '../middleware/auth.middleware';
 import { validateBody } from '../middleware/validation';
 import { rateLimiter } from '../middleware/rateLimiter';
-import { requireAuth } from '../middleware/auth.middleware';
 import Joi from 'joi';
-
-const router = Router();
 
 // Validation schemas
 const registerSchema = Joi.object({
@@ -75,6 +73,8 @@ const refreshTokenSchema = Joi.object({
  * Setup auth routes
  */
 export function setupAuthRoutes(authController: AuthController): Router {
+  const router = Router();
+
   // Register
   router.post(
     '/register',
@@ -106,7 +106,7 @@ export function setupAuthRoutes(authController: AuthController): Router {
     authController.logout.bind(authController)
   );
 
-  // Logout all
+  // Logout all devices
   router.post(
     '/logout-all',
     requireAuth,

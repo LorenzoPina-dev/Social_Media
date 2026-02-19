@@ -1,9 +1,12 @@
 /**
  * Express Type Extensions
- * Extends Express Request with custom properties
+ * Augments Express Request with custom user property.
+ *
+ * IMPORTANTE: questo file non viene mai importato esplicitamente da nessun modulo.
+ * ts-node lo carica perché è elencato in "files" dentro tsconfig.json
+ * (con la flag "ts-node": { "files": true }).
+ * Senza quella configurazione ts-node ignora include/files e il tipo non esiste.
  */
-
-import { User } from './index';
 
 declare global {
   namespace Express {
@@ -19,4 +22,6 @@ declare global {
   }
 }
 
+// export {} rende questo file un modulo ES, necessario perché
+// declare global funzioni correttamente fuori da un contesto ambient.
 export {};

@@ -10,8 +10,6 @@ import { validateBody } from '../middleware/validation';
 import { rateLimiter } from '../middleware/rateLimiter';
 import Joi from 'joi';
 
-const router = Router();
-
 // Validation schemas
 const verifyMFASchema = Joi.object({
   code: Joi.string()
@@ -45,6 +43,8 @@ const regenerateCodesSchema = Joi.object({
  * Setup MFA routes
  */
 export function setupMFARoutes(mfaController: MFAController): Router {
+  const router = Router();
+
   // All MFA routes require authentication
   router.use(requireAuth);
 

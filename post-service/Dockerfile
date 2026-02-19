@@ -14,6 +14,6 @@ RUN npm ci --only=production
 COPY --from=builder /app/dist ./dist
 
 ENV NODE_ENV=production
-EXPOSE 3000
+EXPOSE 3003
 
 CMD ["node", "dist/index.js"]

@@ -8,16 +8,19 @@ import { setupAuthRoutes } from './auth.routes';
 import { setupMFARoutes } from './mfa.routes';
 import { AuthController } from '../controllers/auth.controller';
 import { MFAController } from '../controllers/mfa.controller';
+
 import { AuthService } from '../services/auth.service';
 import { MFAService } from '../services/mfa.service';
 import { JWTService } from '../services/jwt.service';
 import { SessionService } from '../services/session.service';
+
 import { UserModel } from '../models/user.model';
 import { SessionModel } from '../models/session.model';
 import { MFAModel } from '../models/mfa.model';
-import { AuthProducer } from '../kafka/producers/auth.producer';
-import { logger } from '../utils/logger';
 
+import { AuthProducer } from '../kafka/producers/auth.producer';
+
+import { logger } from '../utils/logger';
 /**
  * Setup all routes
  */
@@ -31,7 +34,7 @@ export function setupRoutes(app: Application): void {
   const jwtService = new JWTService();
   const sessionService = new SessionService(sessionModel);
   const authProducer = new AuthProducer();
-  
+
   const authService = new AuthService(
     userModel,
     sessionModel,

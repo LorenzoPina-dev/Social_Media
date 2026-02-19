@@ -3,3 +3,7 @@ package-lock.json
 /auth-service/coverage
 /instruction
 /user-service/coverage
+/auth-service/logs
+/post-service/logs
+/user-service/logs
+/user-service/coverage

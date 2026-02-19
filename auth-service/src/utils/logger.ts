@@ -6,8 +6,8 @@
 import winston from 'winston';
 import { config } from '../config';
 
-const { combine, timestamp, json, printf, colorize } = winston.format;
 
+const { combine, timestamp, json, printf, colorize } = winston.format;
 // Custom format for development
 const devFormat = printf(({ level, message, timestamp: ts, ...metadata }) => {
   let msg = `${ts} [${level}] : ${message}`;
