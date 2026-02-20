@@ -121,7 +121,32 @@ export async function connectKafka(): Promise<void> {
  */
 async function handleUserEvent(event: AuthEvent): Promise<void> {
   logger.info('Handling user event', { eventType: event.type });
-  // TODO: Implement user event handlers
+
+  if ((event as { type: string }).type === 'user_deleted') {
+    const userId = (event as { userId?: string; entityId?: string }).userId
+      ?? (event as { entityId?: string }).entityId;
+    if (!userId) {
+      logger.warn('user_deleted event missing userId/entityId');
+      return;
+    }
+
+    try {
+      const { SessionModel } = await import('../models/session.model');
+      const { PasswordResetModel } = await import('../models/passwordReset.model');
+
+      const sessionModel = new SessionModel();
+      const passwordResetModel = new PasswordResetModel();
+
+      await Promise.allSettled([
+        sessionModel.deleteAllForUser(userId),
+        passwordResetModel.deleteAllForUser(userId),
+      ]);
+
+      logger.info('GDPR: invalidated sessions and reset tokens for deleted user', { userId });
+    } catch (error) {
+      logger.error('Failed to handle user_deleted event', { userId, error });
+    }
+  }
 }
 
 /**
