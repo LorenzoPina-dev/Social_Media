@@ -1,18 +1,18 @@
 #!/usr/bin/env ts-node
 /**
- * Database Initialization Script — media-service
+ * Database Initialization Script — interaction-service
  *
- * Manages database creation, migrations, rollbacks and seeding.
+ * Crea il DB principale (interaction_db) E il DB di test (interaction_test_db),
+ * poi gestisce migration e rollback.
  *
- * Usage:
- *   ts-node scripts/init-db.ts               → migrate latest + seed (default)
- *   ts-node scripts/init-db.ts --migrate      → run pending migrations only
- *   ts-node scripts/init-db.ts --rollback     → rollback last batch
- *   ts-node scripts/init-db.ts --rollback-all → rollback every migration
- *   ts-node scripts/init-db.ts --seed         → run seed only (no migration)
- *   ts-node scripts/init-db.ts --fresh        → drop all + migrate + seed
- *   ts-node scripts/init-db.ts --status       → print migration status
- *   ts-node scripts/init-db.ts --create-db    → create DB if not exists, then migrate
+ * Utilizzo:
+ *   ts-node scripts/init-db.ts               → crea entrambi i DB + migrate
+ *   ts-node scripts/init-db.ts --migrate      → solo migration pending
+ *   ts-node scripts/init-db.ts --rollback     → rollback ultimo batch
+ *   ts-node scripts/init-db.ts --rollback-all → rollback tutte le migration
+ *   ts-node scripts/init-db.ts --fresh        → rollback all + migrate
+ *   ts-node scripts/init-db.ts --status       → stato migration
+ *   ts-node scripts/init-db.ts --test-only    → crea/migra solo il test DB
  */
 
 import path from 'path';
@@ -23,7 +23,13 @@ import { Client } from 'pg';
 import dotenv from 'dotenv';
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/interaction_db';
+const DATABASE_URL =
+  process.env.DATABASE_URL ||
+  'postgresql://postgres:postgres@localhost:5432/interaction_db';
+
+const TEST_DATABASE_URL =
+  process.env.TEST_DATABASE_URL ||
+  DATABASE_URL.replace(/\/([^/?]+)(\?|$)/, '/interaction_test_db$2');
 
 // ─── Parse connection URL ──────────────────────────────────────────────────────
 function parseDbUrl(url: string): { host: string; port: number; user: string; password: string; database: string } {
@@ -73,29 +79,22 @@ function error(msg: string): void {
 // ─── Create DB if not exists ───────────────────────────────────────────────────
 async function createDatabaseIfNotExists(dbUrl: string): Promise<void> {
   const { host, port, user, password, database } = parseDbUrl(dbUrl);
-  log(`Checking if database "${database}" exists...`);
+  log(`Verifico database "${database}"...`);
 
-  // Connect to the default "postgres" database to run CREATE DATABASE
-  const adminClient = new Client({
-    host,
-    port,
-    user,
-    password,
-    database: 'postgres',
-  });
+  const adminClient = new Client({ host, port, user, password, database: 'postgres' });
 
   try {
     await adminClient.connect();
     const result = await adminClient.query(
-      `SELECT 1 FROM pg_database WHERE datname = $1`,
-      [database]
+      'SELECT 1 FROM pg_database WHERE datname = $1',
+      [database],
     );
 
-    if (result.rowCount === 0) {
+    if ((result.rowCount ?? 0) === 0) {
       await adminClient.query(`CREATE DATABASE "${database}"`);
-      success(`Database "${database}" created`);
+      success(`Database "${database}" creato`);
     } else {
-      log(`Database "${database}" already exists — skipping creation`);
+      log(`Database "${database}" già esistente — skip`);
     }
   } finally {
     await adminClient.end();
@@ -189,47 +188,61 @@ async function main(): Promise<void> {
   const shouldStatus = args.includes('--status');
   const noArgs = args.length === 0;
 
-  log(`Database URL: ${DATABASE_URL.replace(/:([^:@]+)@/, ':***@')}`);
+  const testOnly = args.includes('--test-only');
 
-  // Optionally create the database
-  if (shouldCreateDb || noArgs) {
+  log(`DB principale : ${DATABASE_URL.replace(/:([^:@]+)@/, ':***@')}`);
+  log(`DB di test    : ${TEST_DATABASE_URL.replace(/:([^:@]+)@/, ':***@')}`);
+
+  // Crea entrambi i DB fisici
+  if (!testOnly) {
     await createDatabaseIfNotExists(DATABASE_URL);
   }
+  await createDatabaseIfNotExists(TEST_DATABASE_URL);
 
-  const db = buildKnex(DATABASE_URL);
+  const dbMain = testOnly ? null : buildKnex(DATABASE_URL);
+  const dbTest = buildKnex(TEST_DATABASE_URL);
 
   try {
     if (shouldStatus) {
-      await status(db);
+      if (dbMain) await status(dbMain);
+      await status(dbTest);
       return;
     }
 
     if (shouldFresh) {
-      await fresh(db);
+      if (dbMain) await fresh(dbMain);
+      await fresh(dbTest);
+      success('Fresh completato su entrambi i DB');
       return;
     }
 
     if (shouldRollbackAll) {
-      await rollback(db, true);
+      if (dbMain) await rollback(dbMain, true);
+      await rollback(dbTest, true);
       return;
     }
 
     if (shouldRollback) {
-      await rollback(db);
+      if (dbMain) await rollback(dbMain);
+      await rollback(dbTest);
       return;
     }
 
+    // Default: migrate entrambi i DB
+    if (dbMain) await migrate(dbMain);
+    await migrate(dbTest);
 
-    // Default: migrate (+ create DB) and seed in dev
-    await migrate(db);
+    success('Inizializzazione database completata');
+    if (!testOnly) log('  interaction_db      → pronto per sviluppo');
+    log('  interaction_test_db → pronto per i test (npm test)');
 
-    success('Database initialization complete');
   } catch (err: any) {
-    error(`Initialization failed: ${err.message}`);
+    error(`Inizializzazione fallita: ${err.message}`);
     if (process.env.DEBUG) console.error(err);
     process.exit(1);
   } finally {
-    await db.destroy();
+    if (dbMain) await dbMain.destroy();
+    await dbTest.destroy();
   }
 }
 
