@@ -7,3 +7,4 @@ package-lock.json
 /post-service/logs
 /user-service/logs
 /user-service/coverage
+/media-service/coverage
