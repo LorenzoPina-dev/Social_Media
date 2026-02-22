@@ -154,7 +154,9 @@ async function handleUserEvent(event: AuthEvent): Promise<void> {
  */
 async function handlePasswordResetEvent(event: AuthEvent): Promise<void> {
   logger.info('Handling password reset event', { eventType: event.type });
-  // TODO: Implement password reset handlers
+
+  // The actual reset flow is HTTP-driven; this consumer logs the audit trail.
+  // If email integration is added, this is where we'd dispatch the email.
 }
 
 /**

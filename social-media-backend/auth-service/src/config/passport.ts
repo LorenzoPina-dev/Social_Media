@@ -22,7 +22,7 @@ export function setupPassport(): void {
           callbackURL: config.OAUTH.GOOGLE.CALLBACK_URL || '',
           scope: ['profile', 'email'],
         },
-        async (accessToken, refreshToken, profile, done) => {
+        async (_, __, profile, done) => {
           try {
             logger.info('Google OAuth callback', { profileId: profile.id });
 

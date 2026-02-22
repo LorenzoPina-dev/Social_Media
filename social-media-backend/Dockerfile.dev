@@ -1,0 +1,41 @@
+# =============================================================================
+# Dockerfile.dev — Hot-reload per tutti i microservizi in sviluppo locale
+# Usato da docker-compose.dev.yml tramite build.context: . e build.args.SERVICE
+# =============================================================================
+
+ARG SERVICE=auth-service
+
+# ── Stage 1: Install deps con devDependencies ─────────────────────────────────
+FROM node:20-alpine AS base
+ARG SERVICE
+ENV SERVICE=${SERVICE}
+
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app
+
+# Copia package.json del servizio specifico
+COPY ${SERVICE}/package*.json ./
+RUN npm install
+
+# ── Stage 2: Runtime dev ───────────────────────────────────────────────────────
+FROM node:20-alpine
+
+ARG SERVICE
+ENV SERVICE=${SERVICE}
+ENV NODE_ENV=development
+
+WORKDIR /app
+
+COPY --from=base /app/node_modules ./node_modules
+
+# Il codice sorgente viene montato come volume → hot-reload istantaneo
+# EXPOSE viene sovrascritto per servizio nel docker-compose
+
+CMD ["npx", "ts-node-dev", \
+     "--respawn", \
+     "--transpile-only", \
+     "--compiler-options", "{\"module\":\"commonjs\",\"moduleResolution\":\"node\"}", \
+     "--ignore-watch", "node_modules", \
+     "--watch", "src", \
+     "src/index.ts"]

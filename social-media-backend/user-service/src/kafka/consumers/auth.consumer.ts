@@ -3,11 +3,11 @@
  * Consumes authentication events
  */
 
-import { UserService } from '../../services/user.service';
+//import { UserService } from '../../services/user.service';
 import { logger } from '../../utils/logger';
 
 export class AuthConsumer {
-  constructor(private userService: UserService) {}
+  constructor(/*private userService: UserService*/) {}
 
   /**
    * Handle user authenticated event

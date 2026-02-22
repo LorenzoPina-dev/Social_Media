@@ -1,49 +1,841 @@
+# =============================================================================
+# docker-compose.dev.yml — Stack completo di sviluppo locale
+# Social Media Platform · Node.js 20 · TypeScript · Hot-reload
+#
+# AVVIO:   docker-compose -f docker-compose.dev.yml up -d
+# STOP:    docker-compose -f docker-compose.dev.yml down
+# RESET:   docker-compose -f docker-compose.dev.yml down -v
+# LOGS:    docker-compose -f docker-compose.dev.yml logs -f <service>
+#
+# PORTE ESPOSTE (host):
+#   Microservizi  → 3001-3009
+#   PostgreSQL    → 5432   |  pgAdmin       → 5050
+#   Redis         → 6379   |  Redis Commander → 8081
+#   Kafka         → 9092   |  Kafka UI      → 8080
+#   Elasticsearch → 9200   |  Kibana        → 5601
+#   MinIO API     → 9000   |  MinIO Console → 9001
+#   Prometheus    → 9090   |  Grafana       → 3100
+#   NGINX Gateway → 80     |  NGINX HTTPS   → 443
+# =============================================================================
+
 version: '3.8'
 
+# ─────────────────────────────────────────────────────────────────────────────
+# VARIABILI COMUNI (anchor YAML)
+# ─────────────────────────────────────────────────────────────────────────────
+x-common-service: &common-service
+  restart: on-failure
+  networks:
+    - social-media-network
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+x-common-env: &common-env
+  KAFKA_BROKERS: kafka:29092
+  KAFKA_AUTO_OFFSET_RESET: earliest
+  JWT_ACCESS_SECRET: dev-access-secret-min-32-chars-change-in-prod
+  JWT_REFRESH_SECRET: dev-refresh-secret-min-32-chars-change-in-prod
+  JWT_ACCESS_EXPIRY: 15m
+  JWT_REFRESH_EXPIRY: 30d
+
+x-service-build: &service-build
+  context: .
+  dockerfile: Dockerfile.dev
+
 services:
+
+# =============================================================================
+# ██████╗  ██████╗     ██╗███╗  ██╗███████╗██████╗  █████╗
+# ██   ██╗ ██   ██╗    ██╔╝████╗ ██║██╔════╝██   ██╗██╔══██╗
+# ██   ██║ ██████╔╝    ██║ ██╔██╗██║█████╗  ██████╔╝███████║
+# ██   ██╗ ██   ██╗    ██║ ██║╚████║██╔══╝  ██   ██╗██╔══██║
+# ██████╔╝ ██████╔╝    ██║ ██║ ╚███║██║     ██   ██║██║  ██║
+# ╚═════╝  ╚═════╝     ╚═╝ ╚═╝  ╚══╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝
+# =============================================================================
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 15 — Database condiviso (9 DB isolati, creati da init-db.sql)
+  # ---------------------------------------------------------------------------
   postgres:
+    <<: *common-service
     image: postgres:15-alpine
+    container_name: social-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: social_media
+      POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 20s
 
+  # ---------------------------------------------------------------------------
+  # Redis 7 — Cache condivisa fra tutti i servizi
+  # ---------------------------------------------------------------------------
   redis:
+    <<: *common-service
     image: redis:7-alpine
+    container_name: social-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 5s
 
+  # ---------------------------------------------------------------------------
+  # Zookeeper — Richiesto da Kafka
+  # ---------------------------------------------------------------------------
   zookeeper:
-    image: confluentinc/cp-zookeeper:latest
+    <<: *common-service
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: social-zookeeper
+    restart: unless-stopped
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-
-  kafka:
-    image: confluentinc/cp-kafka:latest
-    depends_on:
-      - zookeeper
+      ZOOKEEPER_SYNC_LIMIT: 2
     ports:
-      - "9092:9092"
+      - "2181:2181"
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_logs:/var/lib/zookeeper/log
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ---------------------------------------------------------------------------
+  # Kafka 3.5 — Message broker asincrono
+  # ---------------------------------------------------------------------------
+  kafka:
+    <<: *common-service
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: social-kafka
+    restart: unless-stopped
+    depends_on:
+      zookeeper:
+        condition: service_healthy
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      # PLAINTEXT → accesso dall'host (localhost:9092)
+      # PLAINTEXT_INTERNAL → comunicazione intra-container (kafka:29092)
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168       # 7 giorni
+      KAFKA_NUM_PARTITIONS: 3
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
 
+  # ---------------------------------------------------------------------------
+  # Elasticsearch 8.11 — Full-text search (usato da search-service)
+  # ---------------------------------------------------------------------------
+  elasticsearch:
+    <<: *common-service
+    image: elasticsearch:8.11.0
+    container_name: social-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.ml.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - cluster.routing.allocation.disk.threshold_enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
+
+  # ---------------------------------------------------------------------------
+  # MinIO — Object storage S3-compatible (usato da media-service)
+  # ---------------------------------------------------------------------------
+  minio:
+    <<: *common-service
+    image: minio/minio:latest
+    container_name: social-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports:
+      - "9000:9000"    # S3 API
+      - "9001:9001"    # Web console → http://localhost:9001
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ---------------------------------------------------------------------------
+  # MinIO MC — Crea il bucket "media" al primo avvio
+  # ---------------------------------------------------------------------------
+  minio-init:
+    <<: *common-service
+    image: minio/mc:latest
+    container_name: social-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 minioadmin minioadmin123;
+        mc mb --ignore-existing local/media;
+        mc mb --ignore-existing local/media-thumbnails;
+        mc anonymous set public local/media;
+        echo 'MinIO bucket init completato';
+        exit 0;
+      "
+    restart: "no"
+
+# =============================================================================
+# ███╗   ███╗██╗ ██████╗██████╗  ██████╗ ███████╗███████╗██████╗ ██╗   ██╗██╗
+# ████╗ ████║██║██╔════╝██╔══██╗██╔═══██╗██╔════╝██╔════╝██╔══██╗██║   ██║██║
+# ██╔████╔██║██║██║     ██████╔╝██║   ██║███████╗█████╗  ██████╔╝██║   ██║██║
+# ██║╚██╔╝██║██║██║     ██╔══██╗██║   ██║╚════██║██╔══╝  ██╔══██╗╚██╗ ██╔╝██║
+# ██║ ╚═╝ ██║██║╚██████╗██║  ██║╚██████╔╝███████║███████╗██║  ██║ ╚████╔╝ ██║
+# ╚═╝     ╚═╝╚═╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝
+# =============================================================================
+
+  # ---------------------------------------------------------------------------
+  # auth-service — Porta 3001  (~80% completato, funzionante)
+  # ---------------------------------------------------------------------------
+  auth-service:
+    <<: *common-service
+    container_name: social-auth-service
+    build:
+      <<: *service-build
+      args:
+        SERVICE: auth-service
+    volumes:
+      - ./auth-service/src:/app/src:delegated
+      - ./auth-service/migrations:/app/migrations:delegated
+      - ./shared:/app/shared:delegated
+      - auth_node_modules:/app/node_modules
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      SERVICE_NAME: auth-service
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/auth_db
+      DB_POOL_MIN: 2
+      DB_POOL_MAX: 10
+      REDIS_URL: redis://redis:6379
+      <<: *common-env
+      KAFKA_CLIENT_ID: auth-service
+      KAFKA_GROUP_ID: auth-service-group
+      MFA_ENABLED: "false"
+      RATE_LIMIT_WINDOW_MS: "900000"
+      RATE_LIMIT_MAX_REQUESTS: "100"
+      CORS_ORIGINS: "http://localhost:3000,http://localhost:80"
+      LOG_LEVEL: debug
+      LOG_PRETTY_PRINT: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # user-service — Porta 3002  (~70% completato, richiede migration)
+  # ---------------------------------------------------------------------------
+  user-service:
+    <<: *common-service
+    container_name: social-user-service
+    build:
+      <<: *service-build
+      args:
+        SERVICE: user-service
+    volumes:
+      - ./user-service/src:/app/src:delegated
+      - ./user-service/migrations:/app/migrations:delegated
+      - ./shared:/app/shared:delegated
+      - user_node_modules:/app/node_modules
+    ports:
+      - "3002:3002"
+    environment:
+      NODE_ENV: development
+      PORT: 3002
+      SERVICE_NAME: user-service
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/user_db
+      DB_POOL_MIN: 2
+      DB_POOL_MAX: 10
+      REDIS_URL: redis://redis:6379
+      <<: *common-env
+      KAFKA_CLIENT_ID: user-service
+      KAFKA_GROUP_ID: user-service-group
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3002/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # post-service — Porta 3003  (~5% struttura)
+  # ---------------------------------------------------------------------------
+  post-service:
+    <<: *common-service
+    container_name: social-post-service
+    build:
+      <<: *service-build
+      args:
+        SERVICE: post-service
+    volumes:
+      - ./post-service/src:/app/src:delegated
+      - ./post-service/migrations:/app/migrations:delegated
+      - ./shared:/app/shared:delegated
+      - post_node_modules:/app/node_modules
+    ports:
+      - "3003:3003"
+    environment:
+      NODE_ENV: development
+      PORT: 3003
+      SERVICE_NAME: post-service
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/post_db
+      DB_POOL_MIN: 2
+      DB_POOL_MAX: 10
+      REDIS_URL: redis://redis:6379
+      <<: *common-env
+      KAFKA_CLIENT_ID: post-service
+      KAFKA_GROUP_ID: post-service-group
+      MODERATION_SERVICE_URL: http://moderation-service:3009
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # media-service — Porta 3004  (~5% struttura)
+  # ---------------------------------------------------------------------------
+  media-service:
+    <<: *common-service
+    container_name: social-media-service
+    build:
+      <<: *service-build
+      args:
+        SERVICE: media-service
+    volumes:
+      - ./media-service/src:/app/src:delegated
+      - ./media-service/migrations:/app/migrations:delegated
+      - ./shared:/app/shared:delegated
+      - media_node_modules:/app/node_modules
+    ports:
+      - "3004:3004"
+    environment:
+      NODE_ENV: development
+      PORT: 3004
+      SERVICE_NAME: media-service
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/media_db
+      DB_POOL_MIN: 2
+      DB_POOL_MAX: 10
+      REDIS_URL: redis://redis:6379
+      <<: *common-env
+      KAFKA_CLIENT_ID: media-service
+      KAFKA_GROUP_ID: media-service-group
+      # MinIO (S3-compatible)
+      AWS_ENDPOINT: http://minio:9000
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin123
+      AWS_BUCKET_NAME: media
+      AWS_BUCKET_THUMBNAILS: media-thumbnails
+      AWS_FORCE_PATH_STYLE: "true"
+      CDN_BASE_URL: http://localhost:9000/media
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # interaction-service — Porta 3005  (~5% struttura)
+  # ---------------------------------------------------------------------------
+  interaction-service:
+    <<: *common-service
+    container_name: social-interaction-service
+    build:
+      <<: *service-build
+      args:
+        SERVICE: interaction-service
+    volumes:
+      - ./interaction-service/src:/app/src:delegated
+      - ./interaction-service/migrations:/app/migrations:delegated
+      - ./shared:/app/shared:delegated
+      - interaction_node_modules:/app/node_modules
+    ports:
+      - "3005:3005"
+    environment:
+      NODE_ENV: development
+      PORT: 3005
+      SERVICE_NAME: interaction-service
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/interaction_db
+      DB_POOL_MIN: 2
+      DB_POOL_MAX: 10
+      REDIS_URL: redis://redis:6379
+      <<: *common-env
+      KAFKA_CLIENT_ID: interaction-service
+      KAFKA_GROUP_ID: interaction-service-group
+      POST_SERVICE_URL: http://post-service:3003
+      COUNTER_FLUSH_INTERVAL_MS: "60000"
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # feed-service — Porta 3006  (~5% struttura · nessun DB SQL, solo Redis)
+  # ---------------------------------------------------------------------------
+  feed-service:
+    <<: *common-service
+    container_name: social-feed-service
+    build:
+      <<: *service-build
+      args:
+        SERVICE: feed-service
+    volumes:
+      - ./feed-service/src:/app/src:delegated
+      - ./shared:/app/shared:delegated
+      - feed_node_modules:/app/node_modules
+    ports:
+      - "3006:3006"
+    environment:
+      NODE_ENV: development
+      PORT: 3006
+      SERVICE_NAME: feed-service
+      REDIS_URL: redis://redis:6379
+      <<: *common-env
+      KAFKA_CLIENT_ID: feed-service
+      KAFKA_GROUP_ID: feed-service-group
+      USER_SERVICE_URL: http://user-service:3002
+      POST_SERVICE_URL: http://post-service:3003
+      FEED_MAX_SIZE: "1000"
+      CELEBRITY_FOLLOWER_THRESHOLD: "100000"
+      LOG_LEVEL: debug
+    depends_on:
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # notification-service — Porta 3007  (~5% struttura)
+  # ---------------------------------------------------------------------------
+  notification-service:
+    <<: *common-service
+    container_name: social-notification-service
+    build:
+      <<: *service-build
+      args:
+        SERVICE: notification-service
+    volumes:
+      - ./notification-service/src:/app/src:delegated
+      - ./notification-service/migrations:/app/migrations:delegated
+      - ./shared:/app/shared:delegated
+      - notification_node_modules:/app/node_modules
+    ports:
+      - "3007:3007"
+    environment:
+      NODE_ENV: development
+      PORT: 3007
+      SERVICE_NAME: notification-service
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/notification_db
+      DB_POOL_MIN: 2
+      DB_POOL_MAX: 10
+      REDIS_URL: redis://redis:6379
+      <<: *common-env
+      KAFKA_CLIENT_ID: notification-service
+      KAFKA_GROUP_ID: notification-service-group
+      USER_SERVICE_URL: http://user-service:3002
+      # FCM/APNs — lasciare vuoti in dev, usare mock
+      FCM_SERVER_KEY: ""
+      APNS_KEY_ID: ""
+      APNS_TEAM_ID: ""
+      # Email (dev: log su console, non invia email reali)
+      SMTP_HOST: mailhog
+      SMTP_PORT: "1025"
+      SMTP_SECURE: "false"
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # search-service — Porta 3008  (~5% struttura · solo Elasticsearch)
+  # ---------------------------------------------------------------------------
+  search-service:
+    <<: *common-service
+    container_name: social-search-service
+    build:
+      <<: *service-build
+      args:
+        SERVICE: search-service
+    volumes:
+      - ./search-service/src:/app/src:delegated
+      - ./shared:/app/shared:delegated
+      - search_node_modules:/app/node_modules
+    ports:
+      - "3008:3008"
+    environment:
+      NODE_ENV: development
+      PORT: 3008
+      SERVICE_NAME: search-service
+      REDIS_URL: redis://redis:6379
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      ELASTICSEARCH_INDEX_PREFIX: dev_
+      <<: *common-env
+      KAFKA_CLIENT_ID: search-service
+      KAFKA_GROUP_ID: search-service-group
+      AUTOCOMPLETE_CACHE_TTL: "300"
+      LOG_LEVEL: debug
+    depends_on:
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # moderation-service — Porta 3009  (~5% struttura)
+  # ---------------------------------------------------------------------------
+  moderation-service:
+    <<: *common-service
+    container_name: social-moderation-service
+    build:
+      <<: *service-build
+      args:
+        SERVICE: moderation-service
+    volumes:
+      - ./moderation-service/src:/app/src:delegated
+      - ./moderation-service/migrations:/app/migrations:delegated
+      - ./shared:/app/shared:delegated
+      - moderation_node_modules:/app/node_modules
+    ports:
+      - "3009:3009"
+    environment:
+      NODE_ENV: development
+      PORT: 3009
+      SERVICE_NAME: moderation-service
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/moderation_db
+      DB_POOL_MIN: 2
+      DB_POOL_MAX: 10
+      REDIS_URL: redis://redis:6379
+      <<: *common-env
+      KAFKA_CLIENT_ID: moderation-service
+      KAFKA_GROUP_ID: moderation-service-group
+      POST_SERVICE_URL: http://post-service:3003
+      # Perspective API (ML tossicità) — dev: mock se vuoto
+      PERSPECTIVE_API_KEY: ""
+      ML_TOXICITY_THRESHOLD: "0.8"
+      ML_AUTO_APPROVE_THRESHOLD: "0.2"
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+# =============================================================================
+# API GATEWAY — NGINX (proxy per tutti i microservizi)
+# =============================================================================
+  nginx:
+    <<: *common-service
+    image: nginx:alpine
+    container_name: social-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./config/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - auth-service
+      - user-service
+      - post-service
+      - media-service
+      - interaction-service
+      - feed-service
+      - notification-service
+      - search-service
+      - moderation-service
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+# =============================================================================
+# ADMIN UI & MONITORING
+# =============================================================================
+
+  # ---------------------------------------------------------------------------
+  # pgAdmin 4 — GUI per PostgreSQL → http://localhost:5050
+  # ---------------------------------------------------------------------------
+  pgadmin:
+    <<: *common-service
+    image: dpage/pgadmin4:latest
+    container_name: social-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Redis Commander — GUI per Redis → http://localhost:8081
+  # ---------------------------------------------------------------------------
+  redis-commander:
+    <<: *common-service
+    image: rediscommander/redis-commander:latest
+    container_name: social-redis-commander
+    restart: unless-stopped
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Kafka UI — GUI per Kafka topics → http://localhost:8080
+  # ---------------------------------------------------------------------------
+  kafka-ui:
+    <<: *common-service
+    image: provectuslabs/kafka-ui:latest
+    container_name: social-kafka-ui
+    restart: unless-stopped
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local-dev
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+      DYNAMIC_CONFIG_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Kibana — GUI per Elasticsearch → http://localhost:5601
+  # ---------------------------------------------------------------------------
+  kibana:
+    <<: *common-service
+    image: kibana:8.11.0
+    container_name: social-kibana
+    restart: unless-stopped
+    environment:
+      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+      xpack.security.enabled: "false"
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:5601/api/status | grep -q '\"overall\":{\"level\":\"available\"' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # ---------------------------------------------------------------------------
+  # MailHog — SMTP fake per email in sviluppo → http://localhost:8025
+  # ---------------------------------------------------------------------------
+  mailhog:
+    <<: *common-service
+    image: mailhog/mailhog:latest
+    container_name: social-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"    # SMTP
+      - "8025:8025"    # Web UI → http://localhost:8025
+
+  # ---------------------------------------------------------------------------
+  # Prometheus — Metrics scraping → http://localhost:9090
+  # ---------------------------------------------------------------------------
+  prometheus:
+    <<: *common-service
+    image: prom/prometheus:latest
+    container_name: social-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ---------------------------------------------------------------------------
+  # Grafana — Dashboard monitoring → http://localhost:3100  (admin/admin)
+  # ---------------------------------------------------------------------------
+  grafana:
+    <<: *common-service
+    image: grafana/grafana:latest
+    container_name: social-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_FEATURE_TOGGLES_ENABLE=ngalert
+    ports:
+      - "3100:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    depends_on:
+      - prometheus
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+networks:
+  social-media-network:
+    driver: bridge
+    name: social-media-dev-network
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
 volumes:
+  # Infrastructure
   postgres_data:
+    name: social-dev-postgres
+  redis_data:
+    name: social-dev-redis
+  zookeeper_data:
+    name: social-dev-zookeeper-data
+  zookeeper_logs:
+    name: social-dev-zookeeper-logs
+  kafka_data:
+    name: social-dev-kafka
+  elasticsearch_data:
+    name: social-dev-elasticsearch
+  minio_data:
+    name: social-dev-minio
+  pgadmin_data:
+    name: social-dev-pgadmin
+  prometheus_data:
+    name: social-dev-prometheus
+  grafana_data:
+    name: social-dev-grafana
+
+  # node_modules per ogni servizio (evita conflitti con il filesystem host)
+  auth_node_modules:
+    name: social-dev-auth-modules
+  user_node_modules:
+    name: social-dev-user-modules
+  post_node_modules:
+    name: social-dev-post-modules
+  media_node_modules:
+    name: social-dev-media-modules
+  interaction_node_modules:
+    name: social-dev-interaction-modules
+  feed_node_modules:
+    name: social-dev-feed-modules
+  notification_node_modules:
+    name: social-dev-notification-modules
+  search_node_modules:
+    name: social-dev-search-modules
+  moderation_node_modules:
+    name: social-dev-moderation-modules
