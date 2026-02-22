@@ -20,7 +20,14 @@
     "migrate:make": "knex --knexfile knexfile.ts migrate:make",
     "lint": "eslint src/**/*.ts tests/**/*.ts",
     "lint:fix": "eslint src/**/*.ts tests/**/*.ts --fix",
-    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\""
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "db:init": "ts-node scripts/init-db.ts",
+    "db:migrate": "ts-node scripts/init-db.ts --migrate",
+    "db:seed": "ts-node scripts/init-db.ts --seed",
+    "db:rollback": "ts-node scripts/init-db.ts --rollback",
+    "db:fresh": "ts-node scripts/init-db.ts --fresh",
+    "db:status": "ts-node scripts/init-db.ts --status",
+    "db:create": "ts-node scripts/init-db.ts --create-db"
   },
   "keywords": [
     "microservice",
@@ -64,6 +71,7 @@
     "@types/node": "^20.19.33",
     "@types/passport": "^1.0.17",
     "@types/passport-google-oauth20": "^2.0.17",
+    "@types/pg": "^8.16.0",
     "@types/qrcode": "^1.5.5",
     "@types/speakeasy": "^2.0.10",
     "@types/supertest": "^6.0.2",

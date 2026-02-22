@@ -19,10 +19,6 @@
     "noFallthroughCasesInSwitch": true,
     "typeRoots": ["../node_modules/@types", "./node_modules/@types"]
   },
-  "ts-node": {
-    "transpileOnly": true,
-    "files": true
-  },
   "files": [
     "src/types/express.d.ts"
   ],

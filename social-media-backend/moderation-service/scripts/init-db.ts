@@ -76,16 +76,22 @@ async function createDatabaseIfNotExists(dbUrl: string): Promise<void> {
 
 // ─── Knex factory ─────────────────────────────────────────────────────────────
 
+// Rileva se il processo gira come JS compilato (produzione) o ts-node (sviluppo)
+const IS_COMPILED = __filename.endsWith('.js');
+const MIGRATION_EXT = IS_COMPILED ? 'js' : 'ts';
+const LOAD_EXTS    = IS_COMPILED ? ['.js'] : ['.ts'];
+const MIGRATIONS_DIR = path.join(__dirname, '../migrations');
+
 function buildKnex(connectionString: string): Knex {
   return knex({
     client: 'pg',
     connection: connectionString,
     pool: { min: 1, max: 5 },
     migrations: {
-      directory: path.join(__dirname, '../migrations'),
+      directory: MIGRATIONS_DIR,
       tableName: 'knex_migrations',
-      extension: 'ts',
-      loadExtensions: ['.ts'],
+      extension: MIGRATION_EXT,
+      loadExtensions: LOAD_EXTS,
     },
   });
 }

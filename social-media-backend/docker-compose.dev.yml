@@ -43,7 +43,7 @@ x-common-env: &common-env
 
 x-service-build: &service-build
   context: .
-  dockerfile: Dockerfile.dev
+  dockerfile: Dockerfile
 
 services:
 
@@ -80,6 +80,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+
+  
 
   # ---------------------------------------------------------------------------
   # Redis 7 — Cache condivisa fra tutti i servizi
@@ -248,12 +250,12 @@ services:
     <<: *common-service
     container_name: social-auth-service
     build:
-      <<: *service-build
-      args:
-        SERVICE: auth-service
+      context: ./auth-service  # Il contesto è la cartella del servizio
+      dockerfile: Dockerfile   # Il Dockerfile dentro quella cartella
     volumes:
       - ./auth-service/src:/app/src:delegated
       - ./auth-service/migrations:/app/migrations:delegated
+      - ./auth-service/scripts:/app/scripts:delegated
       - ./shared:/app/shared:delegated
       - auth_node_modules:/app/node_modules
     ports:
@@ -296,9 +298,8 @@ services:
     <<: *common-service
     container_name: social-user-service
     build:
-      <<: *service-build
-      args:
-        SERVICE: user-service
+      context: ./user-service  # Il contesto è la cartella del servizio
+      dockerfile: Dockerfile   # Il Dockerfile dentro quella cartella
     volumes:
       - ./user-service/src:/app/src:delegated
       - ./user-service/migrations:/app/migrations:delegated
@@ -341,9 +342,8 @@ services:
     <<: *common-service
     container_name: social-post-service
     build:
-      <<: *service-build
-      args:
-        SERVICE: post-service
+      context: ./post-service  # Il contesto è la cartella del servizio
+      dockerfile: Dockerfile   # Il Dockerfile dentro quella cartella
     volumes:
       - ./post-service/src:/app/src:delegated
       - ./post-service/migrations:/app/migrations:delegated
@@ -379,9 +379,8 @@ services:
     <<: *common-service
     container_name: social-media-service
     build:
-      <<: *service-build
-      args:
-        SERVICE: media-service
+      context: ./media-service  # Il contesto è la cartella del servizio
+      dockerfile: Dockerfile   # Il Dockerfile dentro quella cartella
     volumes:
       - ./media-service/src:/app/src:delegated
       - ./media-service/migrations:/app/migrations:delegated
@@ -427,9 +426,8 @@ services:
     <<: *common-service
     container_name: social-interaction-service
     build:
-      <<: *service-build
-      args:
-        SERVICE: interaction-service
+      context: ./interaction-service  # Il contesto è la cartella del servizio
+      dockerfile: Dockerfile   # Il Dockerfile dentro quella cartella
     volumes:
       - ./interaction-service/src:/app/src:delegated
       - ./interaction-service/migrations:/app/migrations:delegated
@@ -466,9 +464,8 @@ services:
     <<: *common-service
     container_name: social-feed-service
     build:
-      <<: *service-build
-      args:
-        SERVICE: feed-service
+      context: ./feed-service
+      dockerfile: Dockerfile 
     volumes:
       - ./feed-service/src:/app/src:delegated
       - ./shared:/app/shared:delegated
@@ -501,9 +498,8 @@ services:
     <<: *common-service
     container_name: social-notification-service
     build:
-      <<: *service-build
-      args:
-        SERVICE: notification-service
+      context: ./notification-service
+      dockerfile: Dockerfile 
     volumes:
       - ./notification-service/src:/app/src:delegated
       - ./notification-service/migrations:/app/migrations:delegated
@@ -547,9 +543,8 @@ services:
     <<: *common-service
     container_name: social-search-service
     build:
-      <<: *service-build
-      args:
-        SERVICE: search-service
+      context: ./notification-service
+      dockerfile: Dockerfile 
     volumes:
       - ./search-service/src:/app/src:delegated
       - ./shared:/app/shared:delegated
@@ -583,9 +578,8 @@ services:
     <<: *common-service
     container_name: social-moderation-service
     build:
-      <<: *service-build
-      args:
-        SERVICE: moderation-service
+      context: ./moderation-service
+      dockerfile: Dockerfile 
     volumes:
       - ./moderation-service/src:/app/src:delegated
       - ./moderation-service/migrations:/app/migrations:delegated

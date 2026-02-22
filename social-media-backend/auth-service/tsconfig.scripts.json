@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./dist",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": false
+  },
+  "include": [
+    "scripts/**/*",
+    "migrations/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "src",
+    "tests",
+    "dist"
+  ]
+}

@@ -19,7 +19,7 @@ Production-ready microservice for Social Media Platform.
 
 ```bash
 # Install dependencies
-npm install
+npm cinstall
 
 # Run migrations
 npm run migrate
