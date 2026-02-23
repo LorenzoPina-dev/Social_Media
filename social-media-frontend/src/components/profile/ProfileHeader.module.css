@@ -1,0 +1,94 @@
+.header {
+  display: flex;
+  gap: var(--space-8);
+  padding: var(--space-6) 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.avatarSection {
+  flex-shrink: 0;
+}
+
+.infoSection {
+  flex: 1;
+}
+
+.usernameRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.username {
+  font-size: var(--font-2xl);
+  font-weight: 300;
+  color: var(--text-primary);
+}
+
+.verifiedBadge {
+  color: var(--primary);
+  font-size: var(--font-xl);
+}
+
+.stats {
+  display: flex;
+  gap: var(--space-8);
+  margin-bottom: var(--space-4);
+}
+
+.stat {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.statValue {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.statLabel {
+  color: var(--text-secondary);
+}
+
+.bio {
+  margin-bottom: var(--space-4);
+}
+
+.displayName {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.bioText {
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+  white-space: pre-wrap;
+}
+
+.website {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.website:hover {
+  text-decoration: underline;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  
+  .stats {
+    justify-content: space-around;
+  }
+}

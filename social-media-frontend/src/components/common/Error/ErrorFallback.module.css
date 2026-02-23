@@ -1,0 +1,42 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: var(--space-8);
+  text-align: center;
+}
+
+.icon {
+  font-size: 4rem;
+  margin-bottom: var(--space-4);
+}
+
+.title {
+  font-size: var(--font-2xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.message {
+  color: var(--text-secondary);
+  margin-bottom: var(--space-6);
+  max-width: 400px;
+}
+
+.button {
+  padding: var(--space-3) var(--space-6);
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--space-2);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.button:hover {
+  background: var(--primary-dark);
+}   

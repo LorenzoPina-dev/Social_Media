@@ -1,0 +1,93 @@
+.shareButton {
+  color: var(--text-secondary);
+}
+
+.modalContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: var(--space-2);
+  cursor: pointer;
+  color: var(--text-primary);
+  transition: background var(--transition-fast);
+}
+
+.option:hover {
+  background: var(--bg-tertiary);
+}
+
+.option svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+
+.divider {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  position: relative;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: calc(50% - 30px);
+  height: 1px;
+  background: var(--border-color);
+}
+
+.divider::before {
+  left: 0;
+}
+
+.divider::after {
+  right: 0;
+}
+
+.comment {
+  padding: var(--space-3);
+  border: 1px solid var(--border-color);
+  border-radius: var(--space-2);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+  resize: vertical;
+  min-height: 80px;
+}
+
+.comment:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.shareAction {
+  padding: var(--space-3);
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--space-2);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.shareAction:hover:not(:disabled) {
+  background: var(--primary-dark);
+}
+
+.shareAction:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

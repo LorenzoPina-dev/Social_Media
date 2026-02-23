@@ -1,0 +1,112 @@
+.searchBar {
+  position: relative;
+  width: 100%;
+}
+
+.form {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input {
+  width: 100%;
+  padding: var(--space-2) var(--space-4);
+  padding-right: 40px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--space-4);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+  transition: all var(--transition-fast);
+}
+
+.input:focus {
+  outline: none;
+  background: var(--bg-primary);
+  border-color: var(--primary);
+}
+
+.searchButton {
+  position: absolute;
+  right: var(--space-2);
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: var(--space-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.searchButton svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.suggestions {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  right: 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--space-2);
+  box-shadow: var(--shadow-md);
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: var(--z-dropdown, 1000);
+}
+
+.suggestion {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+  text-align: left;
+}
+
+.suggestion:hover {
+  background: var(--bg-tertiary);
+}
+
+.suggestion svg {
+  width: 16px;
+  height: 16px;
+  fill: var(--text-secondary);
+}
+
+.loading {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  right: 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--space-2);
+  padding: var(--space-4);
+  text-align: center;
+  z-index: var(--z-dropdown, 1000);
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

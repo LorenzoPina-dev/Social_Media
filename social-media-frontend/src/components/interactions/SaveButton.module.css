@@ -1,0 +1,16 @@
+.saveButton {
+  color: var(--text-secondary);
+  transition: color var(--transition-fast);
+}
+
+.saveButton.saved {
+  color: var(--primary);
+}
+
+.saveButton svg {
+  transition: transform var(--transition-fast);
+}
+
+.saveButton:hover svg {
+  transform: scale(1.1);
+}

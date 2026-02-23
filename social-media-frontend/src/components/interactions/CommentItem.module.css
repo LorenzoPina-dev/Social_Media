@@ -1,0 +1,117 @@
+.commentItem {
+  margin-bottom: var(--space-3);
+}
+
+.commentContent {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.avatar {
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.contentWrapper {
+  flex: 1;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.username {
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.username:hover {
+  text-decoration: underline;
+}
+
+.verifiedBadge {
+  color: var(--primary);
+  font-size: var(--font-xs);
+}
+
+.timestamp {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.text {
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+  line-height: 1.5;
+  margin-bottom: var(--space-1);
+  white-space: pre-wrap;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.likeButton,
+.replyButton,
+.deleteButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+  padding: var(--space-1) 0;
+}
+
+.likeButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.likeButton.liked {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.replyButton:hover {
+  color: var(--text-primary);
+}
+
+.deleteButton:hover {
+  color: var(--danger);
+}
+
+.likeCount {
+  margin-left: var(--space-1);
+}
+
+.repliesToggle {
+  margin-left: 48px;
+  margin-top: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+.repliesToggle button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.repliesToggle button:hover {
+  color: var(--text-primary);
+}
+
+.replies {
+  margin-left: 48px;
+}

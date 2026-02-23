@@ -1,0 +1,156 @@
+.homePage {
+  display: flex;
+  gap: var(--space-4);
+  max-width: var(--max-content-width, 935px);
+  margin: 0 auto;
+  padding: var(--space-4) 0;
+}
+
+.mainContent {
+  flex: 1;
+  max-width: 600px;
+}
+
+.sidebar {
+  width: 300px;
+  position: sticky;
+  top: calc(var(--navbar-height, 60px) + var(--space-4));
+  height: fit-content;
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--bg-secondary);
+  border-radius: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.userAvatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.userDetails {
+  display: flex;
+  flex-direction: column;
+}
+
+.username {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.displayName {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.landing {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: white;
+}
+
+.landingContent {
+  text-align: center;
+  padding: var(--space-8);
+  max-width: 600px;
+}
+
+.landingTitle {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: var(--space-4);
+  letter-spacing: -0.5px;
+}
+
+.landingSubtitle {
+  font-size: var(--font-xl);
+  margin-bottom: var(--space-8);
+  opacity: 0.9;
+}
+
+.landingButtons {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: center;
+}
+
+.loginButton, .registerButton {
+  padding: var(--space-3) var(--space-8);
+  border-radius: var(--space-4);
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform var(--transition-fast);
+}
+
+.loginButton {
+  background: white;
+  color: var(--primary);
+}
+
+.registerButton {
+  background: transparent;
+  color: white;
+  border: 2px solid white;
+}
+
+.loginButton:hover, .registerButton:hover {
+  transform: translateY(-2px);
+}
+
+.createPostFab {
+  position: fixed;
+  bottom: calc(var(--navbar-height, 60px) + var(--space-4) + env(safe-area-inset-bottom));
+  right: var(--space-4);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  border: none;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-fixed, 100);
+}
+
+.createPostFab svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+  
+  .createPostFab {
+    display: flex;
+  }
+  
+  .landingTitle {
+    font-size: 2rem;
+  }
+  
+  .landingSubtitle {
+    font-size: var(--font-base);
+  }
+  
+  .landingButtons {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+}

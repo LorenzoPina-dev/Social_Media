@@ -1,0 +1,71 @@
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  text-decoration: none;
+  color: inherit;
+  border-bottom: 1px solid var(--border-color);
+  transition: background var(--transition-fast);
+  position: relative;
+}
+
+.item:hover {
+  background: var(--bg-tertiary);
+}
+
+.item.unread {
+  background: rgba(var(--primary-rgb), 0.05);
+}
+
+.avatar {
+  flex-shrink: 0;
+}
+
+.iconPlaceholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-lg);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.text {
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+  line-height: 1.4;
+}
+
+.username {
+  font-weight: 600;
+  margin-right: var(--space-1);
+}
+
+.message {
+  color: var(--text-secondary);
+}
+
+.time {
+  font-size: var(--font-xs);
+  color: var(--text-tertiary);
+}
+
+.unreadDot {
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+}

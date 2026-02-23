@@ -1,0 +1,94 @@
+.commentSection {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-primary);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.title {
+  font-size: var(--font-base);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1);
+  border-radius: 50%;
+}
+
+.closeButton:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.closeButton svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.commentsList {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3);
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100px;
+}
+
+.loadMore {
+  text-align: center;
+  padding: var(--space-2);
+}
+
+.commentForm {
+  border-top: 1px solid var(--border-color);
+  padding: var(--space-3);
+}
+
+.replyingTo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-secondary);
+  border-radius: var(--space-2) var(--space-2) 0 0;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.cancelReply {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1);
+}
+
+.cancelReply svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}

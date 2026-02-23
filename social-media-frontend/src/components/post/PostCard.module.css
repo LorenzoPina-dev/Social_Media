@@ -1,0 +1,114 @@
+.postCard {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--space-3);
+  margin-bottom: var(--space-4);
+  overflow: hidden;
+}
+
+.header {
+  padding: var(--space-3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.avatarLink {
+  text-decoration: none;
+}
+
+.userDetails {
+  display: flex;
+  flex-direction: column;
+}
+
+.username {
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.username:hover {
+  text-decoration: underline;
+}
+
+.verifiedBadge {
+  color: var(--primary);
+  font-size: var(--font-xs);
+}
+
+.timestamp {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.media {
+  width: 100%;
+  max-height: 600px;
+  object-fit: cover;
+}
+
+.content {
+  padding: var(--space-3);
+}
+
+.content p {
+  margin-bottom: var(--space-2);
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.hashtags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.hashtag {
+  color: var(--primary);
+  text-decoration: none;
+  font-size: var(--font-sm);
+}
+
+.hashtag:hover {
+  text-decoration: underline;
+}
+
+.stats {
+  padding: 0 var(--space-3) var(--space-2);
+  display: flex;
+  gap: var(--space-4);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.likeCount {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.commentCount {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: var(--font-sm);
+}
+
+.commentCount:hover {
+  color: var(--text-primary);
+}
+
+.comments {
+  border-top: 1px solid var(--border-color);
+  margin-top: var(--space-2);
+}

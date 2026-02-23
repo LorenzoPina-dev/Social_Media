@@ -1,0 +1,46 @@
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+.small {
+  width: 16px;
+  height: 16px;
+}
+
+.medium {
+  width: 24px;
+  height: 24px;
+}
+
+.large {
+  width: 40px;
+  height: 40px;
+}
+
+.primary {
+  color: var(--primary);
+}
+
+.white {
+  color: white;
+}
+
+.gray {
+  color: var(--text-secondary);
+}
+
+.circle {
+  stroke: currentColor;
+  stroke-dasharray: 80;
+  stroke-dashoffset: 60;
+  transform-origin: center;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

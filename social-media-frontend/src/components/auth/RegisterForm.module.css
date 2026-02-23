@@ -1,0 +1,33 @@
+.form {
+  width: 100%;
+  max-width: 400px;
+  padding: var(--space-8);
+  background: var(--bg-primary);
+  border-radius: var(--space-3);
+  box-shadow: var(--shadow-md);
+}
+
+.title {
+  font-size: var(--font-2xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-6);
+  text-align: center;
+}
+
+.login {
+  margin-top: var(--space-6);
+  text-align: center;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.login a {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.login a:hover {
+  text-decoration: underline;
+}

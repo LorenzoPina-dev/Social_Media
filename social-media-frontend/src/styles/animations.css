@@ -1,0 +1,134 @@
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes skeletonLoading {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.fadeIn {
+  animation: fadeIn var(--transition-base) var(--ease-out);
+}
+
+.fadeOut {
+  animation: fadeOut var(--transition-base) var(--ease-out);
+}
+
+.slideInUp {
+  animation: slideInUp var(--transition-base) var(--ease-out);
+}
+
+.slideInDown {
+  animation: slideInDown var(--transition-base) var(--ease-out);
+}
+
+.slideInLeft {
+  animation: slideInLeft var(--transition-base) var(--ease-out);
+}
+
+.slideInRight {
+  animation: slideInRight var(--transition-base) var(--ease-out);
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+.pulse {
+  animation: pulse 2s var(--ease-in-out) infinite;
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--bg-secondary) 37%,
+    var(--bg-tertiary) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeletonLoading 1.4s ease infinite;
+}

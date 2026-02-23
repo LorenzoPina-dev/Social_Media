@@ -1,0 +1,23 @@
+.stats {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border-color);
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  text-decoration: none;
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+}
+
+.count {
+  font-weight: 600;
+}
+
+.label {
+  color: var(--text-secondary);
+}

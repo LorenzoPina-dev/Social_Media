@@ -1,0 +1,54 @@
+.userResult {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border-radius: var(--space-2);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.userResult:hover {
+  background: var(--bg-tertiary);
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.names {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.username {
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.verifiedBadge {
+  color: var(--primary);
+  font-size: var(--font-xs);
+}
+
+.displayName {
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+}
+
+.stats {
+  display: flex;
+  gap: var(--space-2);
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.action {
+  flex-shrink: 0;
+}

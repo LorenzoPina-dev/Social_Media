@@ -1,0 +1,47 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3);
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.avatarLink {
+  text-decoration: none;
+}
+
+.userDetails {
+  display: flex;
+  flex-direction: column;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.username {
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.username:hover {
+  text-decoration: underline;
+}
+
+.verifiedBadge {
+  color: var(--primary);
+  font-size: var(--font-xs);
+}
+
+.timestamp {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}

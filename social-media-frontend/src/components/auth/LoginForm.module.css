@@ -1,0 +1,58 @@
+.form {
+  width: 100%;
+  max-width: 400px;
+  padding: var(--space-8);
+  background: var(--bg-primary);
+  border-radius: var(--space-3);
+  box-shadow: var(--shadow-md);
+}
+
+.title {
+  font-size: var(--font-2xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-6);
+  text-align: center;
+}
+
+.error {
+  background: rgba(var(--danger-rgb), 0.1);
+  color: var(--danger);
+  padding: var(--space-3);
+  border-radius: var(--space-2);
+  margin-bottom: var(--space-4);
+  font-size: var(--font-sm);
+  text-align: center;
+}
+
+.forgotPassword {
+  text-align: right;
+  margin: var(--space-2) 0 var(--space-4);
+}
+
+.forgotPassword a {
+  color: var(--primary);
+  font-size: var(--font-sm);
+  text-decoration: none;
+}
+
+.forgotPassword a:hover {
+  text-decoration: underline;
+}
+
+.register {
+  margin-top: var(--space-6);
+  text-align: center;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.register a {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.register a:hover {
+  text-decoration: underline;
+}

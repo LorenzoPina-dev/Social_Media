@@ -1,0 +1,19 @@
+.list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.empty {
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+  color: var(--text-secondary);
+}
+
+.emptyIcon {
+  font-size: 3rem;
+  margin-bottom: var(--space-2);
+}
+
+.emptyText {
+  font-size: var(--font-sm);
+}

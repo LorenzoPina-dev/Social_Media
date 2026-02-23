@@ -1,0 +1,71 @@
+.container {
+  padding: var(--space-4);
+}
+
+.loading {
+  text-align: center;
+  padding: var(--space-8);
+}
+
+.title {
+  font-size: var(--font-xl);
+  font-weight: 600;
+  margin-bottom: var(--space-4);
+  color: var(--text-primary);
+}
+
+.qrContainer {
+  display: flex;
+  justify-content: center;
+  margin: var(--space-6) 0;
+  padding: var(--space-4);
+  background: white;
+  border-radius: var(--space-2);
+}
+
+.secret {
+  text-align: center;
+  margin-bottom: var(--space-4);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.secret code {
+  background: var(--bg-tertiary);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--space-1);
+  font-family: monospace;
+  font-size: var(--font-base);
+  color: var(--text-primary);
+}
+
+.instruction {
+  margin-bottom: var(--space-6);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  margin-top: var(--space-6);
+}
+
+.backupCodes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+  margin: var(--space-6) 0;
+}
+
+.backupCode {
+  background: var(--bg-tertiary);
+  padding: var(--space-2);
+  border-radius: var(--space-1);
+  font-family: monospace;
+  font-size: var(--font-sm);
+  text-align: center;
+  color: var(--text-primary);
+}

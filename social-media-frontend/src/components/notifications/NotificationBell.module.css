@@ -1,0 +1,81 @@
+.container {
+  position: relative;
+}
+
+.bellButton {
+  position: relative;
+  color: var(--text-primary);
+}
+
+.badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: var(--danger);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 2px;
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  width: 360px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--space-2);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-dropdown, 1000);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.title {
+  font-size: var(--font-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.markAllRead {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.markAllRead:hover {
+  text-decoration: underline;
+}
+
+.viewAll {
+  display: block;
+  text-align: center;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border-color);
+  color: var(--primary);
+  text-decoration: none;
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+.viewAll:hover {
+  background: var(--bg-tertiary);
+}

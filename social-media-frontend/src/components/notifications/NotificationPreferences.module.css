@@ -1,0 +1,77 @@
+.preferences {
+  max-width: 600px;
+  padding: var(--space-4);
+}
+
+.title {
+  font-size: var(--font-xl);
+  font-weight: 600;
+  margin-bottom: var(--space-6);
+  color: var(--text-primary);
+}
+
+.section {
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.section:last-child {
+  border-bottom: none;
+}
+
+.sectionTitle {
+  font-size: var(--font-base);
+  font-weight: 600;
+  margin-bottom: var(--space-3);
+  color: var(--text-primary);
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+}
+
+.option input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.quietHours {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  margin-left: var(--space-5);
+}
+
+.timeInput {
+  padding: var(--space-2);
+  border: 1px solid var(--border-color);
+  border-radius: var(--space-2);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+}
+
+.saveButton {
+  margin-top: var(--space-6);
+  width: 100%;
+}
+
+.loading {
+  text-align: center;
+  padding: var(--space-8);
+  color: var(--text-secondary);
+}

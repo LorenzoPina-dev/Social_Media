@@ -1,0 +1,28 @@
+.feed {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.error {
+  text-align: center;
+  padding: var(--space-12) var(--space-4);
+  color: var(--text-secondary);
+}
+
+.retryButton {
+  margin-top: var(--space-4);
+  padding: var(--space-2) var(--space-6);
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--space-2);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.endMessage {
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+}

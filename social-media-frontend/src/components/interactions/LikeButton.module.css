@@ -1,0 +1,16 @@
+.likeButton {
+  color: var(--text-secondary);
+  transition: color var(--transition-fast);
+}
+
+.likeButton.liked {
+  color: var(--danger);
+}
+
+.likeButton svg {
+  transition: transform var(--transition-fast);
+}
+
+.likeButton:hover svg {
+  transform: scale(1.1);
+}

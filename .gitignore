@@ -2,3 +2,9 @@
 social-media-backend/*/.env
 social-media-backend/*/log
 social-media-backend/package.json
+/social-media-frontend/node_modules
+social-media-frontend/.env
+/social-media-backend/*/logs
+/social-media-backend/shared/dist
+/social-media-backend/*/dist
+/social-media-backend/*/node_modules

@@ -1,0 +1,21 @@
+.hashtagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.hashtag {
+  color: var(--primary);
+  text-decoration: none;
+  font-size: var(--font-sm);
+}
+
+.hashtag:hover {
+  text-decoration: underline;
+}
+
+.more {
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+}

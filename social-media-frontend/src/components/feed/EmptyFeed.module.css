@@ -1,0 +1,22 @@
+.emptyFeed {
+  text-align: center;
+  padding: var(--space-16) var(--space-4);
+  color: var(--text-secondary);
+}
+
+.icon {
+  font-size: 4rem;
+  margin-bottom: var(--space-4);
+}
+
+.title {
+  font-size: var(--font-xl);
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+  color: var(--text-primary);
+}
+
+.message {
+  margin-bottom: var(--space-6);
+  font-size: var(--font-sm);
+}
