@@ -97,20 +97,35 @@ export interface KafkaBaseEvent {
   payload?: Record<string, unknown>;
 }
 
-// interaction_events
+// interaction_events — payload allineati a quelli prodotti da interaction-service
 export interface LikeCreatedEvent extends KafkaBaseEvent {
   type: 'like_created';
-  payload: { targetType: 'POST' | 'COMMENT'; postAuthorId?: string };
+  payload: {
+    targetType: 'POST' | 'COMMENT';
+    targetId: string;    // postId o commentId
+    postAuthorId?: string; // opzionale: non presente nell'evento base
+  };
 }
 
 export interface CommentCreatedEvent extends KafkaBaseEvent {
   type: 'comment_created';
-  payload: { postId: string; parentId: string | null; postAuthorId?: string; parentAuthorId?: string };
+  payload: {
+    postId: string;
+    parentId: string | null;
+    content: string;
+    postAuthorId?: string;    // opzionale
+    parentAuthorId?: string;  // opzionale
+  };
 }
 
 export interface ShareCreatedEvent extends KafkaBaseEvent {
   type: 'share_created';
-  payload: { postAuthorId?: string };
+  // entityId = postId (vedi interaction-service share.service.ts)
+  payload: {
+    shareId?: string;
+    comment?: string;
+    postAuthorId?: string; // opzionale
+  };
 }
 
 // user_events

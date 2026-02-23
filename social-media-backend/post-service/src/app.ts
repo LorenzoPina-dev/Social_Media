@@ -18,6 +18,7 @@ import { connectRedis, getRedisClient } from './config/redis';
 import { connectKafka, registerKafkaHandler } from './config/kafka';
 import { UserEventConsumer } from './kafka/consumers/user.consumer';
 import { ModerationEventConsumer } from './kafka/consumers/moderation.consumer';
+import { InteractionEventConsumer } from './kafka/consumers/interaction.consumer';
 import { SchedulerService } from './services/scheduler.service';
 
 export async function createApp(): Promise<{ app: Application; scheduler: SchedulerService }> {
@@ -93,9 +94,11 @@ export async function createApp(): Promise<{ app: Application; scheduler: Schedu
 
   const userConsumer = new UserEventConsumer(postModel);
   const moderationConsumer = new ModerationEventConsumer(postModel, cacheService);
+  const interactionConsumer = new InteractionEventConsumer(postModel);
 
   registerKafkaHandler('user_events', (event) => userConsumer.processMessage(event));
   registerKafkaHandler('moderation_events', (event) => moderationConsumer.processMessage(event));
+  registerKafkaHandler('interaction_events', (event) => interactionConsumer.processMessage(event));
 
   // ─── Scheduler (usa le stesse istanze) ───────────────────────────────────
   const scheduler = new SchedulerService(postModel, postProducer, hashtagService, cacheService);

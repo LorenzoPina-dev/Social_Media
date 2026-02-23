@@ -86,7 +86,7 @@ Write-Host ''
 # Install dependencies for auth-service
 Write-Host ' Installing auth-service dependencies...' -ForegroundColor Yellow
 Set-Location auth-service
-npm install
+npm cinstall
 Write-Host ' Auth service dependencies installed' -ForegroundColor Green
 Write-Host ''
 
@@ -104,7 +104,7 @@ Set-Location ..
 # Install dependencies for user-service
 Write-Host ' Installing user-service dependencies...' -ForegroundColor Yellow
 Set-Location user-service
-npm install
+npm cinstall
 Write-Host ' User service dependencies installed' -ForegroundColor Green
 Write-Host ''
 

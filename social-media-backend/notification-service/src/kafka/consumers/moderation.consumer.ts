@@ -1,42 +1,25 @@
 /**
  * Kafka Consumer — moderation_events
  *
- * Gestisce: content_rejected, content_approved
- * Notifica il proprietario del contenuto con l'esito della moderazione.
+ * Gestisce: content_rejected → notifica il proprietario del contenuto rimosso
+ *           content_approved → notifica approvazione (se precedentemente segnalato)
+ *
+ * NOTA: processMessage() è chiamato dal dispatcher centrale in app.ts.
  */
 
-import { getKafkaConsumer } from '../../config/kafka';
 import { NotificationService } from '../../services/notification.service';
 import { logger } from '../../utils/logger';
 import { ContentRejectedEvent, ContentApprovedEvent, KafkaBaseEvent } from '../../types';
 
 export class ModerationConsumer {
-  private started = false;
-
   constructor(private readonly notificationService: NotificationService) {}
 
-  async start(): Promise<void> {
-    if (this.started) return;
+  async processMessage(event: unknown): Promise<void> {
+    const e = event as KafkaBaseEvent;
     try {
-      const consumer = getKafkaConsumer();
-      await consumer.subscribe({ topics: ['moderation_events'], fromBeginning: false });
-      this.started = true;
-      logger.info('ModerationConsumer subscribed to moderation_events');
-
-      await consumer.run({
-        eachMessage: async ({ message }) => {
-          const raw = message.value?.toString();
-          if (!raw) return;
-          try {
-            const event = JSON.parse(raw) as KafkaBaseEvent;
-            await this.handle(event);
-          } catch (err) {
-            logger.error('ModerationConsumer: failed to process message', { err });
-          }
-        },
-      });
+      await this.handle(e);
     } catch (err) {
-      logger.warn('ModerationConsumer: could not subscribe', { err });
+      logger.error('ModerationConsumer: failed to process message', { type: e.type, err });
     }
   }
 
@@ -48,13 +31,20 @@ export class ModerationConsumer {
       case 'content_approved':
         await this.handleContentApproved(event as ContentApprovedEvent);
         break;
+      case 'content_flagged':
+        // Solo logging — non genera notifica all'utente per flagging automatico
+        logger.debug('Content flagged by moderation system', { entityId: event.entityId });
+        break;
       default:
     }
   }
 
   private async handleContentRejected(event: ContentRejectedEvent): Promise<void> {
     const ownerId = event.payload?.ownerId || event.userId;
-    if (!ownerId) return;
+    if (!ownerId) {
+      logger.warn('content_rejected: missing ownerId/userId', { event });
+      return;
+    }
 
     await this.notificationService.notify({
       recipientId: ownerId,
@@ -72,7 +62,6 @@ export class ModerationConsumer {
     const ownerId = event.payload?.ownerId || event.userId;
     if (!ownerId) return;
 
-    // Notifica di approvazione: opzionale, invia solo se era stato segnalato
     await this.notificationService.notify({
       recipientId: ownerId,
       type: 'SYSTEM',

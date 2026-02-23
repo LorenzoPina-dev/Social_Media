@@ -2,40 +2,23 @@
  * Kafka Consumer — user_events
  *
  * Gestisce: follow_created, user_deleted (GDPR)
+ *
+ * NOTA: processMessage() è chiamato dal dispatcher centrale in app.ts.
  */
 
-import { getKafkaConsumer } from '../../config/kafka';
 import { NotificationService } from '../../services/notification.service';
 import { logger } from '../../utils/logger';
 import { FollowCreatedEvent, UserDeletedEvent, KafkaBaseEvent } from '../../types';
 
 export class UserEventConsumer {
-  private started = false;
-
   constructor(private readonly notificationService: NotificationService) {}
 
-  async start(): Promise<void> {
-    if (this.started) return;
+  async processMessage(event: unknown): Promise<void> {
+    const e = event as KafkaBaseEvent;
     try {
-      const consumer = getKafkaConsumer();
-      await consumer.subscribe({ topics: ['user_events'], fromBeginning: false });
-      this.started = true;
-      logger.info('UserEventConsumer subscribed to user_events');
-
-      await consumer.run({
-        eachMessage: async ({ message }) => {
-          const raw = message.value?.toString();
-          if (!raw) return;
-          try {
-            const event = JSON.parse(raw) as KafkaBaseEvent;
-            await this.handle(event);
-          } catch (err) {
-            logger.error('UserEventConsumer: failed to process message', { err });
-          }
-        },
-      });
+      await this.handle(e);
     } catch (err) {
-      logger.warn('UserEventConsumer: could not subscribe', { err });
+      logger.error('UserEventConsumer: failed to process message', { type: e.type, err });
     }
   }
 
@@ -45,10 +28,11 @@ export class UserEventConsumer {
         await this.handleFollowCreated(event as FollowCreatedEvent);
         break;
       case 'user_deleted':
+      case 'user_permanently_deleted':
         await this.handleUserDeleted(event as UserDeletedEvent);
         break;
       default:
-        // Ignora user_updated ecc.
+        // Ignora user_updated, follow_deleted ecc.
     }
   }
 
@@ -56,9 +40,12 @@ export class UserEventConsumer {
     const followingId = event.payload?.followingId;
     if (!followingId) return;
 
+    // Non notificare se si segue se stessi (caso edge)
+    if (followingId === event.userId) return;
+
     await this.notificationService.notify({
-      recipientId: followingId,           // chi viene seguito
-      actorId: event.userId,              // chi ha seguito
+      recipientId: followingId,           // chi viene seguito riceve la notifica
+      actorId: event.userId,              // chi ha premuto "segui"
       type: 'FOLLOW',
       entityId: event.userId,
       entityType: 'USER',

@@ -5,6 +5,8 @@
 import { Kafka, Producer, Consumer, logLevel } from 'kafkajs';
 import { config } from './index';
 import { logger } from '../utils/logger';
+import { PostEventConsumer } from '../kafka/consumers/post.consumer';
+import { UserEventConsumer } from '../kafka/consumers/user.consumer';
 
 let kafka: Kafka | null = null;
 let producer: Producer | null = null;
@@ -42,10 +44,15 @@ export async function connectKafka(): Promise<void> {
     logger.info('✅ Kafka consumer connected successfully');
 
     try {
+      // Istanzia i consumer formali con tutta la logica di business
+      const postEventConsumer = new PostEventConsumer();
+      const userEventConsumer = new UserEventConsumer();
+
       await consumer.subscribe({
         topics: ['post_events', 'user_events'],
         fromBeginning: false,
       });
+      logger.info('✅ Subscribed to Kafka topics: post_events, user_events');
 
       await consumer.run({
         eachMessage: async ({ topic, message }) => {
@@ -55,10 +62,16 @@ export async function connectKafka(): Promise<void> {
             const event = JSON.parse(value);
             logger.debug('Kafka message received', { topic, eventType: event.type });
 
-            if (topic === 'post_events') await handlePostEvent(event);
-            else if (topic === 'user_events') await handleUserEvent(event);
+            if (topic === 'post_events') {
+              await postEventConsumer.processMessage(event);
+            } else if (topic === 'user_events') {
+              await userEventConsumer.processMessage(event);
+            } else {
+              logger.warn('No handler for topic', { topic });
+            }
           } catch (error) {
             logger.error('Failed to process Kafka message', { error, topic });
+            // Non rilanciare: evita loop infiniti su messaggi corrotti
           }
         },
       });
@@ -72,47 +85,6 @@ export async function connectKafka(): Promise<void> {
     logger.warn('⚠️  Kafka connection failed, continuing without Kafka', {
       error: error instanceof Error ? error.message : 'Unknown error',
     });
-  }
-}
-
-async function handlePostEvent(event: { type: string; entityId?: string }): Promise<void> {
-  logger.info('Handling post event', { eventType: event.type });
-  if (event.type === 'post_deleted' && event.entityId) {
-    // Lazy import to avoid circular dependency at boot time
-    const { LikeModel } = await import('../models/like.model');
-    const { CommentModel } = await import('../models/comment.model');
-    const { ShareModel } = await import('../models/share.model');
-
-    const likeModel = new LikeModel();
-    const commentModel = new CommentModel();
-    const shareModel = new ShareModel();
-
-    await Promise.allSettled([
-      likeModel.deleteByTarget(event.entityId, 'POST'),
-      commentModel.softDeleteByPost(event.entityId),
-      shareModel.deleteByPost(event.entityId),
-    ]);
-    logger.info('Cascade deleted interactions for post', { postId: event.entityId });
-  }
-}
-
-async function handleUserEvent(event: { type: string; entityId?: string }): Promise<void> {
-  logger.info('Handling user event', { eventType: event.type });
-  if (event.type === 'user_deleted' && event.entityId) {
-    const { LikeModel } = await import('../models/like.model');
-    const { CommentModel } = await import('../models/comment.model');
-    const { ShareModel } = await import('../models/share.model');
-
-    const likeModel = new LikeModel();
-    const commentModel = new CommentModel();
-    const shareModel = new ShareModel();
-
-    await Promise.allSettled([
-      likeModel.deleteByUser(event.entityId),
-      commentModel.softDeleteByUser(event.entityId),
-      shareModel.deleteByUser(event.entityId),
-    ]);
-    logger.info('Cascade deleted interactions for user', { userId: event.entityId });
   }
 }
 

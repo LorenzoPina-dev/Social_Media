@@ -11,7 +11,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware/requestLogger';
 import { connectDatabase } from './config/database';
 import { connectRedis } from './config/redis';
-import { connectKafka } from './config/kafka';
+import { connectKafka, registerTopicHandler } from './config/kafka';
 import { websocketService } from './services/websocket.service';
 import { InteractionConsumer } from './kafka/consumers/interaction.consumer';
 import { UserEventConsumer } from './kafka/consumers/user.consumer';
@@ -41,25 +41,14 @@ export async function createApp(): Promise<{ app: Application; httpServer: Retur
   // WebSocket
   websocketService.initialize(httpServer);
 
-  // Kafka (non-blocking)
-  connectKafka().then(() => {
-    const notificationService = createNotificationService();
-    const interactionConsumer = new InteractionConsumer(notificationService);
-    const userConsumer = new UserEventConsumer(notificationService);
-    const postConsumer = new PostEventConsumer(notificationService);
-    const moderationConsumer = new ModerationConsumer(notificationService);
-
-    Promise.allSettled([
-      interactionConsumer.start(),
-      userConsumer.start(),
-      postConsumer.start(),
-      moderationConsumer.start(),
-    ]).then(() => logger.info('✅ Kafka consumers started'));
-  }).catch((err) => logger.warn('⚠️  Kafka unavailable', { err }));
-
-  // Health
+  // Health endpoints (prima delle routes per non essere rate-limited)
   app.get('/health', (_, res) => {
-    res.json({ status: 'healthy', service: 'notification-service', version: config.VERSION, timestamp: new Date().toISOString() });
+    res.json({
+      status: 'healthy',
+      service: 'notification-service',
+      version: config.VERSION,
+      timestamp: new Date().toISOString(),
+    });
   });
 
   app.get('/health/ready', async (_, res) => {
@@ -75,7 +64,39 @@ export async function createApp(): Promise<{ app: Application; httpServer: Retur
     }
   });
 
+  // Routes
   setupRoutes(app);
+
+  // ─── Kafka — non-blocking ────────────────────────────────────────────────
+  // L'approccio corretto: connectKafka() apre UN SOLO consumer.run() con
+  // dispatcher centralizzato. Qui registriamo gli handler per topic DOPO
+  // la connessione, usando registerTopicHandler() esportato da config/kafka.ts.
+  //
+  // IMPORTANTE: gli handler devono essere registrati PRIMA che arrivino messaggi,
+  // quindi vengono registrati subito dopo connectKafka() risolve.
+  connectKafka()
+    .then(() => {
+      // Crea notificationService una sola volta (istanza condivisa)
+      const notificationService = createNotificationService();
+
+      // Istanzia i consumer handler (senza subscribe/run — delegato al dispatcher)
+      const interactionConsumer = new InteractionConsumer(notificationService);
+      const userConsumer = new UserEventConsumer(notificationService);
+      const postConsumer = new PostEventConsumer(notificationService);
+      const moderationConsumer = new ModerationConsumer(notificationService);
+
+      // Registra un handler per topic nel dispatcher centrale
+      registerTopicHandler('interaction_events', (e) => interactionConsumer.processMessage(e));
+      registerTopicHandler('user_events',        (e) => userConsumer.processMessage(e));
+      registerTopicHandler('post_events',        (e) => postConsumer.processMessage(e));
+      registerTopicHandler('moderation_events',  (e) => moderationConsumer.processMessage(e));
+
+      logger.info('✅ Kafka topic handlers registered for notification-service');
+    })
+    .catch((err) => logger.warn('⚠️  Kafka unavailable', { err }));
+  // ────────────────────────────────────────────────────────────────────────
+
+  // Error Handler (deve essere ultimo)
   app.use(errorHandler);
 
   return { app, httpServer };

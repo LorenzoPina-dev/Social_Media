@@ -42,7 +42,7 @@ export async function connectKafka(): Promise<void> {
     logger.info('✅ Kafka consumer connected successfully');
 
     await consumer.subscribe({
-      topics: ['user_events', 'moderation_events'],
+      topics: ['user_events', 'moderation_events', 'interaction_events'],
       fromBeginning: false,
     });
 

@@ -2,10 +2,15 @@
  * Kafka Consumer — interaction_events
  *
  * Gestisce: like_created, comment_created, share_created
+ *
+ * NOTA: processMessage() è chiamato dal dispatcher centrale in app.ts.
+ * Poiché il payload di interaction_events non include postAuthorId,
+ * il consumer chiama post-service via HTTP per ottenere il proprietario
+ * del contenuto e inviargli la notifica corretta.
  */
 
-import { getKafkaConsumer } from '../../config/kafka';
 import { NotificationService } from '../../services/notification.service';
+import { fetchPostInfo } from '../../services/http.service';
 import { logger } from '../../utils/logger';
 import {
   LikeCreatedEvent,
@@ -15,32 +20,14 @@ import {
 } from '../../types';
 
 export class InteractionConsumer {
-  private started = false;
-
   constructor(private readonly notificationService: NotificationService) {}
 
-  async start(): Promise<void> {
-    if (this.started) return;
+  async processMessage(event: unknown): Promise<void> {
+    const e = event as KafkaBaseEvent;
     try {
-      const consumer = getKafkaConsumer();
-      await consumer.subscribe({ topics: ['interaction_events'], fromBeginning: false });
-      this.started = true;
-      logger.info('InteractionConsumer subscribed to interaction_events');
-
-      await consumer.run({
-        eachMessage: async ({ message }) => {
-          const raw = message.value?.toString();
-          if (!raw) return;
-          try {
-            const event = JSON.parse(raw) as KafkaBaseEvent;
-            await this.handle(event);
-          } catch (err) {
-            logger.error('InteractionConsumer: failed to process message', { err });
-          }
-        },
-      });
+      await this.handle(e);
     } catch (err) {
-      logger.warn('InteractionConsumer: could not subscribe', { err });
+      logger.error('InteractionConsumer: failed to process message', { type: e.type, err });
     }
   }
 
@@ -56,33 +43,45 @@ export class InteractionConsumer {
         await this.handleShareCreated(event as ShareCreatedEvent);
         break;
       default:
-        // Ignora altri eventi
+        // Ignora like_deleted, comment_deleted (nessuna notifica per rimozioni)
     }
   }
 
   private async handleLikeCreated(event: LikeCreatedEvent): Promise<void> {
-    const postAuthorId = event.payload?.postAuthorId;
-    if (!postAuthorId) return;
+    const { targetType, targetId } = event.payload;
+    if (targetType !== 'POST') {
+      // Per like su commenti: notifica non implementata nel MVP
+      return;
+    }
+
+    // Recupera l'autore del post da post-service
+    const postInfo = await fetchPostInfo(targetId);
+    if (!postInfo) return;
+
+    const postAuthorId = postInfo.userId;
+    if (postAuthorId === event.userId) return; // non notificare se si mette like al proprio post
 
     await this.notificationService.notify({
       recipientId: postAuthorId,
       actorId: event.userId,
       type: 'LIKE',
       entityId: event.entityId,
-      entityType: event.payload?.targetType === 'POST' ? 'POST' : 'COMMENT',
+      entityType: 'POST',
       title: 'Nuovo like',
-      body: 'Qualcuno ha messo like al tuo contenuto',
+      body: 'Qualcuno ha messo like al tuo post',
     });
 
     logger.debug('LikeCreated notification handled', { postAuthorId, actorId: event.userId });
   }
 
   private async handleCommentCreated(event: CommentCreatedEvent): Promise<void> {
-    const { postAuthorId, parentAuthorId, postId } = event.payload ?? {};
+    const { postId, parentId } = event.payload;
 
-    if (postAuthorId) {
+    // Recupera autore del post
+    const postInfo = await fetchPostInfo(postId);
+    if (postInfo && postInfo.userId !== event.userId) {
       await this.notificationService.notify({
-        recipientId: postAuthorId,
+        recipientId: postInfo.userId,
         actorId: event.userId,
         type: 'COMMENT',
         entityId: postId,
@@ -92,15 +91,15 @@ export class InteractionConsumer {
       });
     }
 
-    if (parentAuthorId && parentAuthorId !== postAuthorId) {
-      await this.notificationService.notify({
-        recipientId: parentAuthorId,
-        actorId: event.userId,
-        type: 'COMMENT',
-        entityId: event.entityId,
-        entityType: 'COMMENT',
-        title: 'Nuova risposta',
-        body: 'Qualcuno ha risposto al tuo commento',
+    // Se è una reply, notifica anche l'autore del commento padre
+    // (postId lo conosciamo dal payload; parentId è il commentId padre)
+    if (parentId) {
+      // Non abbiamo l'autore del commento padre senza chiamare interaction-service.
+      // Per ora skippiamo questa notifica — può essere aggiunta con una chiamata HTTP
+      // a interaction-service GET /comments/:id
+      logger.debug('CommentCreated: reply notification skipped (no parentAuthorId available)', {
+        commentId: event.entityId,
+        parentId,
       });
     }
 
@@ -108,14 +107,19 @@ export class InteractionConsumer {
   }
 
   private async handleShareCreated(event: ShareCreatedEvent): Promise<void> {
-    const postAuthorId = event.payload?.postAuthorId;
-    if (!postAuthorId) return;
+    const postId = event.entityId; // per share_created, entityId = postId
+
+    const postInfo = await fetchPostInfo(postId);
+    if (!postInfo) return;
+
+    const postAuthorId = postInfo.userId;
+    if (postAuthorId === event.userId) return;
 
     await this.notificationService.notify({
       recipientId: postAuthorId,
       actorId: event.userId,
       type: 'SHARE',
-      entityId: event.entityId,
+      entityId: postId,
       entityType: 'POST',
       title: 'Post condiviso',
       body: 'Qualcuno ha condiviso il tuo post',

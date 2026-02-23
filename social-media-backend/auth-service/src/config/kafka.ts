@@ -7,6 +7,7 @@ import { Kafka, Producer, Consumer, logLevel } from 'kafkajs';
 import { config } from './index';
 import { logger } from '../utils/logger';
 import { AuthEvent } from '../types';
+import { UserEventConsumer } from '../kafka/consumers/user.consumer';
 
 let kafka: Kafka | null = null;
 let producer: Producer | null = null;
@@ -63,48 +64,46 @@ export async function connectKafka(): Promise<void> {
     // Subscribe to relevant topics (with error handling)
     // Topics will be created automatically if they don't exist
     try {
+      // Istanzia il consumer formale che gestisce user_events
+      const userEventConsumer = new UserEventConsumer();
+
       await consumer.subscribe({
         topics: ['user_events', 'password_reset_requested'],
         fromBeginning: false,
       });
-      logger.info('✅ Subscribed to Kafka topics');
-      
-      // Start consuming ONLY if subscribe succeeded
+      logger.info('✅ Subscribed to Kafka topics: user_events, password_reset_requested');
+
       await consumer.run({
         eachMessage: async ({ topic, partition, message }) => {
           try {
             const value = message.value?.toString();
-            if (value) {
-              const event = JSON.parse(value) as AuthEvent;
-              logger.info('Kafka message received', {
-                topic,
-                partition,
-                event: event.type,
-              });
+            if (!value) return;
 
-              // Handle events based on topic
-              switch (topic) {
-                case 'user_events':
-                  await handleUserEvent(event);
-                  break;
-                case 'password_reset_requested':
-                  await handlePasswordResetEvent(event);
-                  break;
-                default:
-                  logger.warn('Unknown topic', { topic });
-              }
+            const event = JSON.parse(value) as AuthEvent;
+            logger.debug('Kafka message received', { topic, partition, eventType: event.type });
+
+            switch (topic) {
+              case 'user_events':
+                // Delega al consumer formale (GDPR: sessioni + reset token)
+                await userEventConsumer.processMessage(event);
+                break;
+              case 'password_reset_requested':
+                await handlePasswordResetEvent(event);
+                break;
+              default:
+                logger.warn('Unknown topic', { topic });
             }
           } catch (error) {
             logger.error('Failed to process Kafka message', { error, topic });
+            // Non rilanciare: evita loop infiniti su messaggi corrotti
           }
         },
       });
     } catch (error) {
-      logger.warn('⚠️  Could not subscribe to Kafka topics, consumer will not run', { 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      logger.warn('⚠️  Could not subscribe to Kafka topics, consumer will not run', {
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
-      // Don't start consumer.run() if subscribe failed
-      // Don't throw - service can still start
+      // Service può partire anche senza consumer
     }
 
   } catch (error) {
@@ -113,39 +112,6 @@ export async function connectKafka(): Promise<void> {
     });
     // Don't throw - allow service to start without Kafka
     // Kafka will be unavailable but service can still handle HTTP requests
-  }
-}
-
-/**
- * Handle user events
- */
-async function handleUserEvent(event: AuthEvent): Promise<void> {
-  logger.info('Handling user event', { eventType: event.type });
-
-  if ((event as { type: string }).type === 'user_deleted') {
-    const userId = (event as { userId?: string; entityId?: string }).userId
-      ?? (event as { entityId?: string }).entityId;
-    if (!userId) {
-      logger.warn('user_deleted event missing userId/entityId');
-      return;
-    }
-
-    try {
-      const { SessionModel } = await import('../models/session.model');
-      const { PasswordResetModel } = await import('../models/passwordReset.model');
-
-      const sessionModel = new SessionModel();
-      const passwordResetModel = new PasswordResetModel();
-
-      await Promise.allSettled([
-        sessionModel.deleteAllForUser(userId),
-        passwordResetModel.deleteAllForUser(userId),
-      ]);
-
-      logger.info('GDPR: invalidated sessions and reset tokens for deleted user', { userId });
-    } catch (error) {
-      logger.error('Failed to handle user_deleted event', { userId, error });
-    }
   }
 }
 
