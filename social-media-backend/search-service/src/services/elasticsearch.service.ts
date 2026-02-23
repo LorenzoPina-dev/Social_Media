@@ -4,6 +4,7 @@
  */
 
 import { Client } from '@elastic/elasticsearch';
+import type { Sort } from '@elastic/elasticsearch/lib/api/types';
 import { getElasticsearchClient } from '../config/elasticsearch';
 import { logger } from '../utils/logger';
 import { metrics } from '../utils/metrics';
@@ -74,7 +75,7 @@ export class ElasticsearchService {
   async search<T = Record<string, unknown>>(
     index: string,
     query: Record<string, unknown>,
-    options: { from?: number; size?: number; sort?: unknown[] } = {},
+    options: { from?: number; size?: number; sort?: Sort } = {},
   ): Promise<{ hits: T[]; total: number; took: number }> {
     try {
       const response = await this.client.search({

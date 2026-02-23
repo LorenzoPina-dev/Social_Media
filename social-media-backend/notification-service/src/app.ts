@@ -24,7 +24,9 @@ export async function createApp(): Promise<{ app: Application; httpServer: Retur
 
   // Security
   app.use(helmet());
-  app.use(cors({ origin: config.CORS_ORIGINS, credentials: true, methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'] }));
+  const corsOptions = { origin: config.CORS_ORIGINS, credentials: true, methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization'] };
+  app.options('*', cors(corsOptions));
+  app.use(cors(corsOptions));
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
   app.use(compression());

@@ -39,12 +39,14 @@ export async function createApp(): Promise<{ app: Application; scheduler: Schedu
   }));
 
   // ─── CORS ────────────────────────────────────────────────────────────────
-  app.use(cors({
+  const corsOptions = {
     origin: config.CORS_ORIGINS,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-  }));
+  };
+  app.options('*', cors(corsOptions));
+  app.use(cors(corsOptions));
 
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));

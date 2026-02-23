@@ -40,6 +40,7 @@ x-common-env: &common-env
   JWT_REFRESH_SECRET: dev-refresh-secret-min-32-chars-change-in-prod
   JWT_ACCESS_EXPIRY: 15m
   JWT_REFRESH_EXPIRY: 30d
+  CORS_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://localhost:80"
 
 x-service-build: &service-build
   context: .
@@ -274,7 +275,6 @@ services:
       MFA_ENABLED: "false"
       RATE_LIMIT_WINDOW_MS: "900000"
       RATE_LIMIT_MAX_REQUESTS: "100"
-      CORS_ORIGINS: "http://localhost:3000,http://localhost:80"
       LOG_LEVEL: debug
       LOG_PRETTY_PRINT: "true"
     depends_on:
@@ -543,7 +543,7 @@ services:
     <<: *common-service
     container_name: social-search-service
     build:
-      context: ./notification-service
+      context: ./search-service
       dockerfile: Dockerfile 
     volumes:
       - ./search-service/src:/app/src:delegated

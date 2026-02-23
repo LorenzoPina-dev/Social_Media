@@ -4,6 +4,7 @@ import cors from 'cors';
 import compression from 'compression';
 import 'express-async-errors';
 
+import { config } from './config';
 import { apiRateLimiter } from './middleware/rateLimiter';
 import { errorHandler } from './middleware/errorHandler';
 import { router } from './routes';
@@ -15,7 +16,14 @@ export function createApp(): express.Application {
 
   // Security
   app.use(helmet());
-  app.use(cors());
+  const corsOptions = {
+    origin: config.corsOrigins,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  };
+  app.options('*', cors(corsOptions));
+  app.use(cors(corsOptions));
   app.disable('x-powered-by');
 
   // Body parsing

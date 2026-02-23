@@ -34,6 +34,7 @@ const schema = Joi.object({
   ML_AUTO_APPROVE_THRESHOLD: Joi.number().min(0).max(1).default(0.2),
 
   LOG_LEVEL: Joi.string().valid('debug', 'info', 'warn', 'error').default('info'),
+  CORS_ORIGINS: Joi.string().default('http://localhost:5173,http://localhost:3000,http://localhost:80'),
 });
 
 const { error, value } = schema.validate(process.env, { allowUnknown: true });
@@ -91,4 +92,5 @@ export const config = {
   },
 
   logLevel: value.LOG_LEVEL as string,
+  corsOrigins: (value.CORS_ORIGINS as string).split(','),
 } as const;
