@@ -10,7 +10,11 @@ import { errorHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware/requestLogger';
 import { connectDatabase } from './config/database';
 import { connectRedis } from './config/redis';
-import { connectKafka } from './config/kafka';
+import { connectKafka, initConsumers } from './config/kafka';
+import { UserService } from './services/user.service';
+import { UserModel } from './models/user.model';
+import { CacheService } from './services/cache.service';
+import { UserProducer } from './kafka/producers/user.producer';
 
     /**
      * Create Express app
@@ -101,6 +105,15 @@ import { connectKafka } from './config/kafka';
 
     // Setup routes
     setupRoutes(app);
+
+    // Init Kafka consumers — dopo setupRoutes perché userService
+    // deve essere disponibile (DB e Redis già connessi a questo punto)
+    const userService = new UserService(
+      new UserModel(),
+      new CacheService(),
+      new UserProducer(),
+    );
+    initConsumers(userService);
 
     // Error handling (must be last)
     app.use(errorHandler);

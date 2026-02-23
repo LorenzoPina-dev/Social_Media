@@ -20,9 +20,10 @@ export interface User {
 }
 
 export interface CreateUserDto {
+  id: string;
   username: string;
   email: string;
-  display_name: string;
+  display_name?: string;  // opzionale: può non essere presente all'evento Kafka
   bio?: string;
   avatar_url?: string;
 }

@@ -6,10 +6,12 @@
 import { Kafka, Producer, Consumer, logLevel } from 'kafkajs';
 import { config } from './index';
 import { logger } from '../utils/logger';
+import { AuthConsumer } from '../kafka/consumers/auth.consumer';
 
 let kafka: Kafka | null = null;
 let producer: Producer | null = null;
 let consumer: Consumer | null = null;
+let authConsumer: AuthConsumer | null = null;
 
 /**
  * Create Kafka instance
@@ -30,6 +32,14 @@ function createKafka(): Kafka {
   });
 
   return kafka;
+}
+
+/**
+ * Inizializza i consumer con le dipendenze (chiamato dopo setupRoutes)
+ */
+export function initConsumers(userService: import('../services/user.service').UserService): void {
+  authConsumer = new AuthConsumer(userService);
+  logger.info('Kafka consumers initialized');
 }
 
 /**
@@ -68,21 +78,25 @@ export async function connectKafka(): Promise<void> {
     // Start consuming
     await consumer.run({
       eachMessage: async ({ topic, partition, message }) => {
-        try {
-          const value = message.value?.toString();
-          if (value) {
-            const event = JSON.parse(value);
-            logger.info('Kafka message received', {
-              topic,
-              partition,
-              event: event.type,
-            });
+        const value = message.value;
+        if (!value) return;
 
-            // Handle events
-            // TODO: Implement event handlers
+        try {
+          const eventType = JSON.parse(value.toString())?.type ?? 'unknown';
+          logger.info('Kafka message received', { topic, partition, eventType });
+
+          if (topic === 'auth_events') {
+            if (!authConsumer) {
+              logger.warn('authConsumer not initialized yet — message skipped', { eventType });
+              return;
+            }
+            await authConsumer.processMessage(value);
+          } else {
+            logger.warn('No handler registered for topic', { topic });
           }
         } catch (error) {
           logger.error('Failed to process Kafka message', { error, topic });
+          // non rilanciare: Kafka non ha DLQ configurato, evita loop infiniti
         }
       },
     });
@@ -129,6 +143,8 @@ export async function disconnectKafka(): Promise<void> {
       consumer = null;
       logger.info('Kafka consumer disconnected');
     }
+
+    authConsumer = null;
   } catch (error) {
     logger.error('Error disconnecting from Kafka', { error });
   }

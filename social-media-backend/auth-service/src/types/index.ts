@@ -189,6 +189,7 @@ export interface UserRegisteredEvent {
   userId: string;
   username: string;
   email: string;
+  display_name?: string;
   timestamp: Date;
 }
 
