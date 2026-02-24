@@ -15,7 +15,7 @@
 
 .main {
   flex: 1;
-  margin-left: var(--sidebar-width, 280px);
+  margin-left: 0;
   padding: var(--space-4) 0;
 }
 

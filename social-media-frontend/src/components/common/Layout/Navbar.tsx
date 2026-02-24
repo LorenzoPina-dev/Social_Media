@@ -51,9 +51,9 @@ export const Navbar = () => {
                 </svg>
               </Link>
 
-              <Link to="/notifications" className={styles.navItem}>
+              <div className={styles.navItem}>
                 <NotificationBell count={unreadCount} />
-              </Link>
+              </div>
 
               <Link to="/messages" className={styles.navItem}>
                 <svg viewBox="0 0 24 24">

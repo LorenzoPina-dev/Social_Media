@@ -6,16 +6,18 @@ import { Server as HttpServer } from 'http';
 import { Server as SocketServer, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
-import { getRedisClient } from '../config/redis';
 import { logger } from '../utils/logger';
 import { metrics } from '../utils/metrics';
 
 interface AuthPayload {
-  userId: string;
-  username: string;
+  userId?: string;
+  id?: string;
+  sub?: string;
+  username?: string;
 }
 
 let io: SocketServer | null = null;
+const USER_ROOM_PREFIX = 'user:';
 
 export class WebSocketService {
   /**
@@ -34,26 +36,14 @@ export class WebSocketService {
 
     io.on('connection', async (socket: Socket) => {
       const userId = (socket as unknown as { userId: string }).userId;
+      const room = `${USER_ROOM_PREFIX}${userId}`;
+      socket.join(room);
       logger.info('WebSocket client connected', { userId, socketId: socket.id });
       metrics.incGauge('ws_connections');
-
-      // Salva sessione in Redis
-      try {
-        const redis = getRedisClient();
-        await redis.setex(`ws:session:${userId}`, config.CACHE.WS_SESSION_TTL, socket.id);
-      } catch (err) {
-        logger.error('Failed to save WS session in Redis', { err });
-      }
 
       socket.on('disconnect', async () => {
         logger.info('WebSocket client disconnected', { userId, socketId: socket.id });
         metrics.decGauge('ws_connections');
-        try {
-          const redis = getRedisClient();
-          await redis.del(`ws:session:${userId}`);
-        } catch (err) {
-          logger.error('Failed to remove WS session from Redis', { err });
-        }
       });
 
       // Client può confermare ricezione
@@ -80,7 +70,11 @@ export class WebSocketService {
 
     try {
       const decoded = jwt.verify(token, config.JWT_ACCESS_SECRET) as AuthPayload;
-      (socket as unknown as { userId: string }).userId = decoded.userId;
+      const userId = decoded.userId || decoded.id || decoded.sub;
+      if (!userId) {
+        return next(new Error('Authentication error: invalid token payload'));
+      }
+      (socket as unknown as { userId: string }).userId = userId;
       next();
     } catch {
       next(new Error('Authentication error: invalid token'));
@@ -92,12 +86,11 @@ export class WebSocketService {
    */
   async emitToUser(userId: string, event: string, data: unknown): Promise<boolean> {
     try {
-      const redis = getRedisClient();
-      const socketId = await redis.get(`ws:session:${userId}`);
-
-      if (!socketId || !io) return false;
-
-      io.to(socketId).emit(event, data);
+      if (!io) return false;
+      const room = `${USER_ROOM_PREFIX}${userId}`;
+      const sockets = await io.in(room).fetchSockets();
+      if (sockets.length === 0) return false;
+      io.to(room).emit(event, data);
       logger.debug('WebSocket event emitted', { userId, event });
       return true;
     } catch (error) {
@@ -111,9 +104,10 @@ export class WebSocketService {
    */
   async isUserOnline(userId: string): Promise<boolean> {
     try {
-      const redis = getRedisClient();
-      const sessionId = await redis.get(`ws:session:${userId}`);
-      return !!sessionId;
+      if (!io) return false;
+      const room = `${USER_ROOM_PREFIX}${userId}`;
+      const sockets = await io.in(room).fetchSockets();
+      return sockets.length > 0;
     } catch {
       return false;
     }

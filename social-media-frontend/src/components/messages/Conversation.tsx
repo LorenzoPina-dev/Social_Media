@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { jwtDecode } from 'jwt-decode';
 import { Avatar } from '@/components/common/Avatar/Avatar';
 import { MessageBubble } from './MessageBubble';
 import { MessageInput } from './MessageInput';
@@ -33,6 +34,11 @@ interface Participant {
   is_online?: boolean;
 }
 
+interface JwtPayload {
+  userId?: string;
+  sub?: string;
+}
+
 export const Conversation: React.FC = () => {
   const { conversationId } = useParams<{ conversationId: string }>();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -45,12 +51,72 @@ export const Conversation: React.FC = () => {
   const { socket, isConnected } = useSocket();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const currentUserId = user?.id || (() => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return undefined;
+    try {
+      const decoded = jwtDecode<JwtPayload>(token);
+      return decoded.userId || decoded.sub;
+    } catch {
+      return undefined;
+    }
+  })();
+
+  const normalizeMessage = (raw: any): Message => ({
+    id: raw.id,
+    conversation_id: raw.conversation_id ?? raw.conversationId ?? '',
+    sender_id: raw.sender_id ?? raw.senderId ?? '',
+    content: raw.content ?? '',
+    created_at: raw.created_at ?? raw.createdAt ?? new Date().toISOString(),
+    read_at: raw.read_at ?? raw.readAt ?? null,
+  });
+
+  const mergeById = (previous: Message[], next: Message[]): Message[] => {
+    const merged = new Map<string, Message>();
+    for (const msg of previous) merged.set(msg.id, msg);
+    for (const msg of next) merged.set(msg.id, msg);
+    return Array.from(merged.values()).sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+  };
+
+  const isOwnMessage = (message: Message): boolean => {
+    if (participant?.id) {
+      return message.sender_id !== participant.id;
+    }
+    if (currentUserId) {
+      return message.sender_id === currentUserId;
+    }
+    return false;
+  };
 
   useEffect(() => {
     if (conversationId) {
       loadConversation();
     }
   }, [conversationId]);
+
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const handleChatMessage = (event: Event) => {
+      const customEvent = event as CustomEvent<{ conversationId?: string }>;
+      const incomingConversationId = customEvent.detail?.conversationId;
+      if (incomingConversationId && incomingConversationId === conversationId) {
+        void refreshMessages();
+      }
+    };
+
+    window.addEventListener('chat:message', handleChatMessage as EventListener);
+    const pollId = window.setInterval(() => {
+      void refreshMessages();
+    }, 3000);
+
+    return () => {
+      window.removeEventListener('chat:message', handleChatMessage as EventListener);
+      window.clearInterval(pollId);
+    };
+  }, [conversationId, currentUserId]);
 
   useEffect(() => {
     scrollToBottom();
@@ -60,11 +126,12 @@ export const Conversation: React.FC = () => {
     if (!socket || !conversationId || !isConnected) return;
 
     const handleNewMessage = (message: Message) => {
-      if (message.conversation_id === conversationId) {
-        setMessages((prev) => [...prev, message]);
+      const normalized = normalizeMessage(message);
+      if (normalized.conversation_id === conversationId) {
+        setMessages((prev) => mergeById(prev, [normalized]));
         
-        if (message.sender_id !== user?.id) {
-          markAsRead(conversationId, message.id).catch(console.error);
+        if (normalized.sender_id !== currentUserId) {
+          markAsRead(conversationId, normalized.id).catch(console.error);
         }
       }
     };
@@ -80,13 +147,13 @@ export const Conversation: React.FC = () => {
     };
 
     const handleTypingStart = (data: { conversationId: string; userId: string }) => {
-      if (data.conversationId === conversationId && data.userId !== user?.id) {
+      if (data.conversationId === conversationId && data.userId !== currentUserId) {
         setIsTyping(true);
       }
     };
 
     const handleTypingStop = (data: { conversationId: string; userId: string }) => {
-      if (data.conversationId === conversationId && data.userId !== user?.id) {
+      if (data.conversationId === conversationId && data.userId !== currentUserId) {
         setIsTyping(false);
       }
     };
@@ -106,7 +173,7 @@ export const Conversation: React.FC = () => {
         clearTimeout(typingTimeoutRef.current);
       }
     };
-  }, [socket, conversationId, isConnected, user?.id]);
+  }, [socket, conversationId, isConnected, currentUserId, participant?.id]);
 
   const loadConversation = async () => {
     setIsLoading(true);
@@ -115,13 +182,13 @@ export const Conversation: React.FC = () => {
         getMessages(conversationId!),
         getConversationDetails(conversationId!),
       ]);
-      setMessages(messagesRes);
+      setMessages(messagesRes.map(normalizeMessage));
       setParticipant(detailsRes.participant as Participant);
       
       // Mark messages as read
       if (messagesRes.length > 0) {
-        const unreadMessages = messagesRes.filter(
-          (m) => m.sender_id !== user?.id && !m.read_at
+        const unreadMessages = messagesRes.map(normalizeMessage).filter(
+          (m) => m.sender_id !== currentUserId && !m.read_at
         );
         for (const msg of unreadMessages) {
           await markAsRead(conversationId!, msg.id);
@@ -136,6 +203,32 @@ export const Conversation: React.FC = () => {
     }
   };
 
+  const refreshMessages = async () => {
+    if (!conversationId) return;
+    try {
+      const latest = await getMessages(conversationId);
+      const normalizedLatest = latest.map(normalizeMessage);
+      setMessages((prev) => {
+        if (
+          normalizedLatest.length === prev.length &&
+          normalizedLatest[normalizedLatest.length - 1]?.id === prev[prev.length - 1]?.id
+        ) {
+          return prev;
+        }
+        return mergeById(prev, normalizedLatest);
+      });
+
+      const unreadMessages = normalizedLatest.filter(
+        (m) => m.sender_id !== currentUserId && !m.read_at
+      );
+      for (const msg of unreadMessages) {
+        await markAsRead(conversationId, msg.id);
+      }
+    } catch (error) {
+      console.error('Failed to refresh conversation messages:', error);
+    }
+  };
+
   const handleSendMessage = async (content: string) => {
     if (!conversationId || !content.trim() || isSending) return;
 
@@ -143,7 +236,10 @@ export const Conversation: React.FC = () => {
     try {
       const newMessage = await sendMessage(conversationId, content);
       
-      setMessages((prev) => [...prev, newMessage]);
+      setMessages((prev) => mergeById(prev, [normalizeMessage(newMessage)]));
+      window.dispatchEvent(
+        new CustomEvent('chat:message', { detail: { conversationId } })
+      );
       socket?.emit('message:send', { conversationId, content });
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -235,7 +331,7 @@ export const Conversation: React.FC = () => {
               )}
               <MessageBubble
                 message={message}
-                isOwn={message.sender_id === user?.id}
+                isOwn={isOwnMessage(message)}
               />
             </div>
           );

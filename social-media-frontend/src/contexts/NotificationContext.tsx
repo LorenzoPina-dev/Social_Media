@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useSocket } from './SocketContext';
 import { useAuth } from './AuthContext';
 import { Notification } from '@/types/notification.types';
@@ -24,31 +24,75 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const { socket, isConnected } = useSocket();
   const { isAuthenticated } = useAuth();
 
-  // Carica notifiche iniziali
-  useEffect(() => {
-    if (isAuthenticated) {
-      refreshNotifications();
-    }
-  }, [isAuthenticated]);
-
   // Aggiorna conteggio non lette
   useEffect(() => {
     const count = notifications.filter(n => !n.read).length;
     setUnreadCount(count);
   }, [notifications]);
 
+  const refreshNotifications = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await getNotifications({ limit: 20 });
+      setNotifications(unwrapItems<Notification>(response.data));
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Carica notifiche iniziali + fallback polling
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    refreshNotifications();
+    const pollId = window.setInterval(() => {
+      void refreshNotifications();
+    }, 8000);
+
+    return () => {
+      window.clearInterval(pollId);
+    };
+  }, [isAuthenticated, refreshNotifications]);
+
   // Ascolta nuove notifiche via socket
   useEffect(() => {
     if (!socket || !isConnected) return;
 
     const handleNewNotification = (notification: Notification) => {
-      setNotifications(prev => [notification, ...prev]);
+      const normalized: Notification = {
+        ...notification,
+        read: notification.read ?? false,
+        updated_at: notification.updated_at ?? notification.created_at,
+        user_id: notification.user_id ?? '',
+      };
+
+      setNotifications(prev => {
+        if (prev.some((n) => n.id === normalized.id)) {
+          return prev;
+        }
+        return [normalized, ...prev];
+      });
+
+      if (normalized.type === 'SYSTEM') {
+        window.dispatchEvent(
+          new CustomEvent('chat:message', {
+            detail: {
+              conversationId:
+                (normalized.data?.conversationId as string | undefined) ??
+                normalized.entity_id,
+              notificationId: normalized.id,
+            },
+          })
+        );
+      }
       
       // Mostra toast per nuove notifiche
-      toast.custom((t) => (
+      toast.custom(() => (
         <div className="notification-toast">
-          <strong>{notification.title}</strong>
-          <p>{notification.body}</p>
+          <strong>{normalized.title}</strong>
+          <p>{normalized.body}</p>
         </div>
       ), { duration: 5000 });
     };
@@ -61,18 +105,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       socket.off('notification:new', handleNewNotification);
     };
   }, [socket, isConnected]);
-
-  const refreshNotifications = async () => {
-    setIsLoading(true);
-    try {
-      const response = await getNotifications({ limit: 20 });
-      setNotifications(unwrapItems<Notification>(response.data));
-    } catch (error) {
-      console.error('Failed to load notifications:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const markAsRead = async (notificationId: string) => {
     try {

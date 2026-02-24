@@ -13,6 +13,7 @@
     "test:e2e": "jest --testPathPattern=tests/e2e --testTimeout=30000 --forceExit",
     "test:coverage": "jest --coverage --forceExit",
     "test:watch": "jest --watch",
+    "init:es": "ts-node scripts/init-elasticsearch.ts",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write \"src/**/*.ts\""
   },

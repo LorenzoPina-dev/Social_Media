@@ -161,14 +161,22 @@ export class UserModel {
     excludeUserId?: string
   ): Promise<User[]> {
     const db = getDatabase();
-    let query = db(this.table)
+    let query = db(`${this.table} as u`)
+      .select('u.*')
       .whereNull('deleted_at')
       .where('status', 'ACTIVE')
       .orderBy('follower_count', 'desc')
       .limit(limit);
 
     if (excludeUserId) {
-      query = query.whereNot('id', excludeUserId);
+      query = query
+        .whereNot('u.id', excludeUserId)
+        .whereNotExists(
+          db('followers as f')
+            .select(db.raw('1'))
+            .where('f.follower_id', excludeUserId)
+            .whereRaw('f.following_id = u.id')
+        );
     }
 
     return query;

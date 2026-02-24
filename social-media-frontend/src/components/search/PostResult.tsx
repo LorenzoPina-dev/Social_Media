@@ -16,33 +16,30 @@ export const PostResult: React.FC<PostResultProps> = ({ post, onClick }) => {
     return content.substring(0, maxLength) + '...';
   };
 
+  const username = post.user?.username || post.user_id || 'utente';
+  const avatarUrl = post.user?.avatar_url;
+  const isVerified = Boolean(post.user?.verified);
+  const likeCount = post.like_count ?? post.likes_count ?? 0;
+  const commentCount = post.comment_count ?? post.comments_count ?? 0;
+  const shareCount = post.share_count ?? post.shares_count ?? 0;
+
   return (
     <Link to={`/p/${post.id}`} className={styles.postResult} onClick={onClick}>
-      {post.media_urls && post.media_urls.length > 0 && (
+      {Array.isArray(post.media_urls) && post.media_urls.length > 0 && (
         <div className={styles.thumbnail}>
-          <img
-            src={post.media_urls[0]}
-            alt=""
-            className={styles.image}
-          />
-          {post.media_types[0] === 'video' && (
-            <span className={styles.videoIcon}>▶</span>
+          <img src={post.media_urls[0]} alt="" className={styles.image} />
+          {Array.isArray(post.media_types) && post.media_types[0] === 'video' && (
+            <span className={styles.videoIcon}>Play</span>
           )}
         </div>
       )}
 
       <div className={styles.content}>
         <div className={styles.user}>
-          <Avatar
-            src={post.user.avatar_url}
-            username={post.user.username}
-            size="small"
-          />
+          <Avatar src={avatarUrl} username={username} size="small" />
           <span className={styles.username}>
-            {post.user.username}
-            {post.user.verified && (
-              <span className={styles.verifiedBadge}>✓</span>
-            )}
+            {username}
+            {isVerified && <span className={styles.verifiedBadge}>OK</span>}
           </span>
           <span className={styles.timestamp}>
             {formatDistanceToNow(new Date(post.created_at), {
@@ -52,12 +49,12 @@ export const PostResult: React.FC<PostResultProps> = ({ post, onClick }) => {
           </span>
         </div>
 
-        <p className={styles.text}>{truncateContent(post.content)}</p>
+        <p className={styles.text}>{truncateContent(post.content || '')}</p>
 
         <div className={styles.stats}>
-          <span>❤️ {post.like_count}</span>
-          <span>💬 {post.comment_count}</span>
-          <span>🔄 {post.share_count}</span>
+          <span>Like {likeCount}</span>
+          <span>Comment {commentCount}</span>
+          <span>Share {shareCount}</span>
         </div>
       </div>
     </Link>

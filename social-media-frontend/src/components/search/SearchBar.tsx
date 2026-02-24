@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDebounce } from '@/hooks/useDebounce';
-import { getAutocompleteSuggestions } from '@/api/search';
+import { getAutocompleteSuggestions, normalizeSuggestionItems } from '@/api/search';
 import styles from './SearchBar.module.css';
 
 export const SearchBar: React.FC = () => {
@@ -11,7 +11,13 @@ export const SearchBar: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const debouncedQuery = useDebounce(query, 300);
+
+  useEffect(() => {
+    const urlQuery = searchParams.get('q') || '';
+    setQuery((prev) => (prev === urlQuery ? prev : urlQuery));
+  }, [searchParams]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -34,7 +40,8 @@ export const SearchBar: React.FC = () => {
       setIsLoading(true);
       try {
         const response = await getAutocompleteSuggestions(debouncedQuery);
-        setSuggestions(response.data);
+        const normalized = normalizeSuggestionItems(response.data).map((item) => item.text);
+        setSuggestions(normalized);
       } catch (error) {
         console.error('Failed to fetch suggestions:', error);
       } finally {
@@ -83,6 +90,7 @@ export const SearchBar: React.FC = () => {
           {suggestions.map((suggestion, index) => (
             <button
               key={index}
+              type="button"
               className={styles.suggestion}
               onClick={() => handleSearch(suggestion)}
             >

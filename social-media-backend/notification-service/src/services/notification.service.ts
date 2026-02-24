@@ -35,6 +35,7 @@ interface NotificationInput {
   entityType?: EntityType;
   title: string;
   body: string;
+  data?: Record<string, unknown>;
   /** email del destinatario (per invio email) */
   recipientEmail?: string;
 }
@@ -105,6 +106,12 @@ export class NotificationService {
       type: notification.type,
       title: notification.title,
       body: notification.body,
+      read: false,
+      user_id: input.recipientId,
+      updated_at: notification.created_at,
+      entity_id: notification.entity_id,
+      entity_type: notification.entity_type,
+      data: input.data,
       created_at: notification.created_at,
     });
 

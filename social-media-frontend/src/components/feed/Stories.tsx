@@ -1,19 +1,29 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Avatar } from '@/components/common/Avatar/Avatar';
-import { getSuggestedUsers } from '@/api/users';
+import { getFollowing } from '@/api/users';
+import { unwrapItems } from '@/api/envelope';
+import { useAuth } from '@/hooks/useAuth';
 import { Profile } from '@/types/user.types';
 import styles from './Stories.module.css';
 
 export const Stories: React.FC = () => {
   const [stories, setStories] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     const loadStories = async () => {
+      if (!user?.id) {
+        setStories([]);
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        const response = await getSuggestedUsers({ limit: 10 });
-        const users = response.data?.data ?? response.data?.items ?? response.data ?? [];
-        setStories(Array.isArray(users) ? users : []);
+        const response = await getFollowing(user.id, { limit: 20 });
+        const users = unwrapItems<Profile>(response.data).filter((u) => u.id !== user.id);
+        setStories(users);
       } catch (error) {
         console.error('Failed to load stories:', error);
       } finally {
@@ -22,7 +32,7 @@ export const Stories: React.FC = () => {
     };
 
     loadStories();
-  }, []);
+  }, [user?.id]);
 
   if (isLoading) {
     return (
@@ -40,7 +50,7 @@ export const Stories: React.FC = () => {
   return (
     <div className={styles.stories}>
       {stories.map((user) => (
-        <div key={user.id} className={styles.story}>
+        <Link key={user.id} to={`/profile/${user.username}`} className={styles.story}>
           <div className={styles.storyRing}>
             <Avatar
               src={user.avatar_url}
@@ -53,7 +63,7 @@ export const Stories: React.FC = () => {
               ? `${user.username.slice(0, 10)}...`
               : user.username}
           </span>
-        </div>
+        </Link>
       ))}
     </div>
   );

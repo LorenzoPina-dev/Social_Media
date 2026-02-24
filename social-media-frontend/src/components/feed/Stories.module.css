@@ -18,6 +18,8 @@
   gap: var(--space-1);
   cursor: pointer;
   min-width: 64px;
+  text-decoration: none;
+  color: inherit;
 }
 
 .storyRing {

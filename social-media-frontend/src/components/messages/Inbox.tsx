@@ -24,6 +24,22 @@ export const Inbox: React.FC = () => {
     void loadConversations();
   }, []);
 
+  useEffect(() => {
+    const handleChatMessage = () => {
+      void loadConversations();
+    };
+
+    window.addEventListener('chat:message', handleChatMessage as EventListener);
+    const pollId = window.setInterval(() => {
+      void loadConversations();
+    }, 5000);
+
+    return () => {
+      window.removeEventListener('chat:message', handleChatMessage as EventListener);
+      window.clearInterval(pollId);
+    };
+  }, []);
+
   const loadConversations = async (): Promise<void> => {
     try {
       const data = await getConversations();

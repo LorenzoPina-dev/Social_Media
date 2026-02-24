@@ -46,6 +46,31 @@ const extractUsers = (payload: any): Profile[] => {
   return [];
 };
 
+const filterOutCurrentUserFromResponse = (responseData: any): any => {
+  const currentUserId = decodeCurrentUserId();
+  if (!currentUserId) return responseData;
+
+  if (Array.isArray(responseData)) {
+    return responseData.filter((u: Profile) => u.id !== currentUserId);
+  }
+
+  if (Array.isArray(responseData?.data)) {
+    return {
+      ...responseData,
+      data: responseData.data.filter((u: Profile) => u.id !== currentUserId),
+    };
+  }
+
+  if (Array.isArray(responseData?.items)) {
+    return {
+      ...responseData,
+      items: responseData.items.filter((u: Profile) => u.id !== currentUserId),
+    };
+  }
+
+  return responseData;
+};
+
 const resolveUserId = async (identifier?: string): Promise<string> => {
   if (!identifier) return requireCurrentUserId();
   if (UUID_REGEX.test(identifier)) return identifier;
@@ -104,11 +129,15 @@ export const getUsersBatch = async (ids: string[]) => {
   return apiClient.post<Profile[]>('/api/v1/users/batch', { ids });
 };
 
-// Backend non espone /users/suggested: fallback su search
 export const getSuggestedUsers = async (params?: { limit?: number; q?: string }) => {
-  return apiClient.get('/api/v1/users/search', {
-    params: { q: params?.q || 'a', limit: params?.limit || 10 },
+  const response = await apiClient.get('/api/v1/users/suggested', {
+    params: { limit: params?.limit || 10 },
   });
+
+  return {
+    ...response,
+    data: filterOutCurrentUserFromResponse(response.data),
+  };
 };
 
 // Followers

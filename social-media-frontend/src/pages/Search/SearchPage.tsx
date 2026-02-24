@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { SearchBar } from '@/components/search/SearchBar';
 import { SearchResults } from '@/components/search/SearchResults';
 import { useSearch } from '@/hooks/useSearch';
@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 
 const SearchPage = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const query = searchParams.get('q') || '';
   
   const {
@@ -21,7 +22,7 @@ const SearchPage = () => {
     if (query) {
       search(query);
     }
-  }, [query]);
+  }, [query, search]);
 
   return (
     <div className={styles.searchPage}>
@@ -37,6 +38,9 @@ const SearchPage = () => {
           posts={posts}
           hashtags={hashtags}
           isLoading={isLoading}
+          onUserClick={(username) => navigate(`/profile/${username}`)}
+          onPostClick={(postId) => navigate(`/p/${postId}`)}
+          onHashtagClick={(tag) => navigate(`/explore/tags/${tag}`)}
         />
       ) : (
         <div className={styles.recentSearches}>

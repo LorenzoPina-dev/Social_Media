@@ -26,6 +26,8 @@
   background: var(--bg-secondary);
   border-radius: var(--space-3);
   margin-bottom: var(--space-4);
+  text-decoration: none;
+  color: inherit;
 }
 
 .userAvatar {

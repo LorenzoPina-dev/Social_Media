@@ -3,13 +3,15 @@ import { Stories } from '@/components/feed/Stories';
 import { Suggestions } from '@/components/feed/Suggestions';
 import { TrendingHashtags } from '@/components/feed/TrendingHashtags';
 import { CreatePostModal } from '@/components/post/CreatePost/CreatePostModal';
+import { Avatar } from '@/components/common/Avatar/Avatar';
 import { useModal } from '@/contexts/ModalContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/useMediaQuery';
+import { Link } from 'react-router-dom';
 import styles from './HomePage.module.css';
 
 const HomePage = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { user } = useAuth();
   const { openModal } = useModal();
   const isMobile = useIsMobile();
 
@@ -47,17 +49,18 @@ const HomePage = () => {
       
       {!isMobile && (
         <aside className={styles.sidebar}>
-          <div className={styles.userInfo}>
-            <img
-              src={user?.avatar_url || '/default-avatar.png'}
-              alt={user?.username}
+          <Link to={user?.username ? `/profile/${user.username}` : '/'} className={styles.userInfo}>
+            <Avatar
+              src={user?.avatar_url}
+              username={user?.username}
+              size="large"
               className={styles.userAvatar}
             />
             <div className={styles.userDetails}>
               <span className={styles.username}>{user?.username}</span>
               <span className={styles.displayName}>{user?.display_name}</span>
             </div>
-          </div>
+          </Link>
           
           <Suggestions />
           <TrendingHashtags />

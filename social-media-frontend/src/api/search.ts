@@ -3,6 +3,7 @@ import { Profile } from '@/types/user.types';
 import { Post } from '@/types/post.types';
 import { Hashtag } from '@/types/post.types';
 import { CursorParams, PaginatedResponse } from '@/types/api.types';
+import { unwrapData } from './envelope';
 
 export interface SearchUsersParams {
   q: string;
@@ -43,7 +44,7 @@ export const getAutocompleteSuggestions = async (
   type?: 'user' | 'hashtag' | 'all',
   limit?: number
 ) => {
-  return apiClient.get<string[]>('/api/v1/search/suggest', {
+  return apiClient.get('/api/v1/search/suggest', {
     params: { q, type, limit },
   });
 };
@@ -52,4 +53,35 @@ export const getTrendingHashtags = async (limit?: number) => {
   return apiClient.get<Hashtag[]>('/api/v1/search/trending/hashtags', {
     params: { limit },
   });
+};
+
+export interface SuggestionItem {
+  type?: 'user' | 'hashtag' | 'post' | 'all';
+  text: string;
+}
+
+export const normalizeSuggestionItems = (payload: unknown): SuggestionItem[] => {
+  const data = unwrapData<unknown>(payload);
+
+  if (!Array.isArray(data)) return [];
+
+  return data
+    .map((item) => {
+      if (typeof item === 'string') {
+        return { text: item };
+      }
+
+      if (
+        item &&
+        typeof item === 'object' &&
+        'text' in item &&
+        typeof (item as { text: unknown }).text === 'string'
+      ) {
+        const typed = item as { type?: SuggestionItem['type']; text: string };
+        return { type: typed.type, text: typed.text };
+      }
+
+      return null;
+    })
+    .filter((item): item is SuggestionItem => item !== null);
 };

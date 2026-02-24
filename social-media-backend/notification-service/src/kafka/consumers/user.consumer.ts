@@ -77,10 +77,15 @@ export class UserEventConsumer {
       recipientId,
       actorId: event.userId,
       type: 'SYSTEM',
-      entityId: event.payload.conversationId,
+      entityId: event.payload.messageId || event.payload.conversationId,
       entityType: 'USER',
       title: 'Nuovo messaggio',
       body: 'Hai ricevuto un nuovo messaggio',
+      data: {
+        conversationId: event.payload.conversationId,
+        messageId: event.payload.messageId,
+        senderId: event.userId,
+      },
     });
   }
 

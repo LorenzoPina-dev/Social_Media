@@ -2,7 +2,6 @@ import { useFeed } from '@/hooks/useFeed';
 import { FeedPost } from './FeedPost';
 import { FeedSkeleton } from './FeedSkeleton';
 import { EmptyFeed } from './EmptyFeed';
-import { Stories } from './Stories';
 import styles from './Feed.module.css';
 
 export const Feed = () => {
@@ -34,8 +33,6 @@ export const Feed = () => {
 
   return (
     <div className={styles.feed}>
-      <Stories />
-      
       {posts.map((post, index) => (
         <FeedPost
           key={post.id}

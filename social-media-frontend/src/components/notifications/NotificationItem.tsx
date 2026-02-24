@@ -32,6 +32,13 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
   };
 
   const getLink = () => {
+    if (notification.type === 'SYSTEM') {
+      const conversationId =
+        (notification.data?.conversationId as string | undefined) ??
+        notification.entity_id;
+      return conversationId ? `/messages/${conversationId}` : '/messages';
+    }
+
     if (notification.entity_type === 'POST' && notification.entity_id) {
       return `/p/${notification.entity_id}`;
     }

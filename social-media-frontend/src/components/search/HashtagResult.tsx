@@ -10,6 +10,8 @@ export const HashtagResult: React.FC<HashtagResultProps> = ({
   hashtag,
   onClick,
 }) => {
+  const postCount = hashtag.post_count ?? hashtag.count ?? 0;
+
   return (
     <div className={styles.hashtagResult} onClick={onClick}>
       <div className={styles.icon}>
@@ -21,7 +23,7 @@ export const HashtagResult: React.FC<HashtagResultProps> = ({
       <div className={styles.info}>
         <span className={styles.tag}>#{hashtag.tag}</span>
         <span className={styles.count}>
-          {hashtag.post_count.toLocaleString('it-IT')} post
+          {postCount.toLocaleString('it-IT')} post
         </span>
       </div>
     </div>
