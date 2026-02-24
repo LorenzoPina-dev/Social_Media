@@ -3,8 +3,8 @@ import { Profile } from './user.types';
 export interface Conversation {
   id: string;
   participant: Profile;
-  last_message?: Message;
-  unread_count: number;
+  lastMessage: Message | null;
+  unreadCount: number;
   updated_at: string;
   created_at: string;
 }
@@ -14,7 +14,7 @@ export interface Message {
   conversation_id: string;
   sender_id: string;
   content: string;
-  read_at?: string;
+  read_at?: string | null;
   created_at: string;
   updated_at: string;
   sender?: Profile;

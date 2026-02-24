@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Post } from '@/types/post.types';
 import { getPost, createPost, updatePost, deletePost, savePost, unsavePost } from '@/api/posts';
+import { unwrapData } from '@/api/envelope';
 import toast from 'react-hot-toast';
 
 export const usePost = (postId?: string) => {
@@ -17,7 +18,7 @@ export const usePost = (postId?: string) => {
     
     try {
       const response = await getPost(postId);
-      setPost(response.data?.data ?? response.data);
+      setPost(unwrapData<Post>(response.data));
     } catch (err) {
       setError(err as Error);
     } finally {
@@ -31,7 +32,7 @@ export const usePost = (postId?: string) => {
     
     try {
       const response = await createPost(data);
-      const createdPost = response.data?.data ?? response.data;
+      const createdPost = unwrapData<Post>(response.data);
       setPost(createdPost);
       toast.success('Post creato con successo!');
       return createdPost;
@@ -50,7 +51,7 @@ export const usePost = (postId?: string) => {
     
     try {
       const response = await updatePost(id, data);
-      const updatedPost = response.data?.data ?? response.data;
+      const updatedPost = unwrapData<Post>(response.data);
       setPost(updatedPost);
       toast.success('Post aggiornato!');
       return updatedPost;

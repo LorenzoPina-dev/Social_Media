@@ -2,6 +2,47 @@
  * TypeScript Type Definitions
  * User Service
  */
+export interface ApiSuccess<T> {
+  success: true;
+  data: T;
+  message?: string;
+}
+
+export interface ApiFailure {
+  success: false;
+  error: string;
+  code: string;
+  details?: Array<{ field?: string; message: string }>;
+}
+
+export type ApiEnvelope<T> = ApiSuccess<T> | ApiFailure;
+
+export interface CursorPage<T> {
+  items: T[];
+  cursor?: string;
+  has_more: boolean;
+}
+
+export interface OffsetPage<T> {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface UserDto {
+  id: string;
+  username: string;
+  email?: string;
+  display_name?: string;
+  avatar_url?: string;
+  bio?: string;
+  verified?: boolean;
+  follower_count?: number;
+  following_count?: number;
+  created_at?: string | Date;
+  updated_at?: string | Date;
+}
 
 export interface User {
   id: string;
@@ -73,16 +114,7 @@ export interface UserProfile extends User {
   followers?: User[];
   following?: User[];
 }
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  pagination: {
-    page: number;
-    pageSize: number;
-    total: number;
-    hasMore: boolean;
-  };
-}
+// Canonical pagination types are exported from @social-media/shared.
 
 export interface SearchFilters {
   verified?: boolean;

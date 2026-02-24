@@ -6,6 +6,7 @@ import { getUserPosts } from '@/api/posts';
 import { Post } from '@/types/post.types';
 import { useAuth } from './useAuth';
 import toast from 'react-hot-toast';
+import { unwrapCursorPage, unwrapData } from '@/api/envelope';
 
 export const useProfile = (username?: string) => {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -26,7 +27,7 @@ export const useProfile = (username?: string) => {
     
     try {
       const response = await getUserProfile(username);
-      setProfile(response.data.data ?? response.data);
+      setProfile(unwrapData<Profile>(response.data));
     } catch (err) {
       setError(err as Error);
       if (err instanceof Error && err.message.includes('404')) {
@@ -47,13 +48,13 @@ export const useProfile = (username?: string) => {
         cursor: reset ? undefined : postsCursor || undefined,
         limit: 12,
       });
-      
-      const newPosts = response.data.data ?? [];
-      const newCursor = response.data.cursor;
+      const page = unwrapCursorPage<Post>(response.data);
+      const newPosts = page.items;
+      const newCursor = page.cursor;
       
       setPosts(prev => reset ? newPosts : [...prev, ...newPosts]);
       setPostsCursor(newCursor || null);
-      setHasMorePosts(!!newCursor);
+      setHasMorePosts(page.has_more);
     } catch (err) {
       console.error('Failed to load posts:', err);
     } finally {
@@ -78,13 +79,12 @@ export const useProfile = (username?: string) => {
     
     try {
       const response = await updateProfile(data);
-      const nextProfile = response.data.data ?? response.data;
+      const nextProfile = unwrapData<Profile>(response.data);
       setProfile(nextProfile);
       if (user) {
         updateUser({ display_name: nextProfile.display_name, avatar_url: nextProfile.avatar_url });
       }
       toast.success('Profilo aggiornato!');
-      return nextProfile;
     } catch (err) {
       toast.error('Errore durante l\'aggiornamento');
       throw err;
@@ -104,8 +104,7 @@ export const useProfile = (username?: string) => {
       });
       toast.success(`Ora segui ${profile.username}`);
     } catch (err) {
-      toast.error('Errore durante il follow');
-      throw err;
+      
     }
   }, [profile]);
 
@@ -122,8 +121,7 @@ export const useProfile = (username?: string) => {
       });
       toast.success(`Non segui più ${profile.username}`);
     } catch (err) {
-      toast.error('Errore durante l\'unfollow');
-      throw err;
+      
     }
   }, [profile]);
 
@@ -142,3 +140,4 @@ export const useProfile = (username?: string) => {
     unfollow,
   };
 };
+

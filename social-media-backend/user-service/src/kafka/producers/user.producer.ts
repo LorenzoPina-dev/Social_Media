@@ -82,6 +82,43 @@ export class UserProducer {
     }
   }
 
+  async publishMessageSent(data: {
+    userId: string;
+    recipientId: string;
+    conversationId: string;
+    messageId: string;
+    content: string;
+    timestamp: string;
+  }): Promise<void> {
+    const producer = this.getProducer();
+    if (!producer) return;
+
+    try {
+      await producer.send({
+        topic: 'user_events',
+        messages: [
+          {
+            key: data.userId,
+            value: JSON.stringify({
+              type: 'message_sent',
+              entityId: data.conversationId,
+              userId: data.userId,
+              timestamp: data.timestamp,
+              payload: {
+                recipientId: data.recipientId,
+                conversationId: data.conversationId,
+                messageId: data.messageId,
+                content: data.content,
+              },
+            }),
+          },
+        ],
+      });
+    } catch (error) {
+      logger.error('Failed to publish message_sent event', { error });
+    }
+  }
+
   async publishUserUnfollowed(data: any): Promise<void> {
     const producer = this.getProducer();
     if (!producer) return;

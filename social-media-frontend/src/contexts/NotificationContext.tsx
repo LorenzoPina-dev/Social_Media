@@ -4,6 +4,7 @@ import { useAuth } from './AuthContext';
 import { Notification } from '@/types/notification.types';
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '@/api/notifications';
 import toast from 'react-hot-toast';
+import { unwrapItems } from '@/api/envelope';
 
 interface NotificationContextType {
   notifications: Notification[];
@@ -53,9 +54,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     };
 
     socket.on('notification', handleNewNotification);
+    socket.on('notification:new', handleNewNotification);
 
     return () => {
       socket.off('notification', handleNewNotification);
+      socket.off('notification:new', handleNewNotification);
     };
   }, [socket, isConnected]);
 
@@ -63,7 +66,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setIsLoading(true);
     try {
       const response = await getNotifications({ limit: 20 });
-      setNotifications(response.data.data);
+      setNotifications(unwrapItems<Notification>(response.data));
     } catch (error) {
       console.error('Failed to load notifications:', error);
     } finally {

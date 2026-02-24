@@ -21,10 +21,14 @@ export interface Comment {
   content: string;
   likes_count: number;
   replies_count: number;
+  like_count: number;
+  reply_count: number;
   liked_by_user?: boolean;
+  is_liked: boolean;
   created_at: string;
   updated_at: string;
-  user?: Profile;
+  user: Profile;
+  replies?: Comment[];
 }
 
 export interface CreateCommentRequest {

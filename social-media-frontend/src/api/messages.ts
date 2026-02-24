@@ -1,7 +1,8 @@
 import { apiClient } from './client';
 import { AxiosError } from 'axios';
-import { Conversation, Message } from '@/types/message.types';
 import { CursorParams } from '@/types/api.types';
+import { Conversation, ConversationDetails, Message } from '@/types/message.types';
+import { unwrapData, unwrapItems } from './envelope';
 
 const isMessagesUnavailable = (error: unknown): boolean => {
   const axiosError = error as AxiosError;
@@ -9,58 +10,59 @@ const isMessagesUnavailable = (error: unknown): boolean => {
   return axiosError.code === 'ERR_NETWORK' || status === 404 || status === 501;
 };
 
-export const getConversations = async () => {
+export const getConversations = async (): Promise<Conversation[]> => {
   try {
-    return await apiClient.get<Conversation[]>('/api/v1/messages/conversations');
+    const response = await apiClient.get('/api/v1/messages/conversations');
+    return unwrapItems<Conversation>(response.data);
   } catch (error) {
     if (isMessagesUnavailable(error)) {
-      return {
-        data: [],
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      };
+      return [];
     }
     throw error;
   }
 };
 
-export const getConversationDetails = async (conversationId: string) => {
-  return apiClient.get<{ participant: Conversation['participant'] }>(
-    `/api/v1/messages/conversations/${conversationId}`
-  );
+export const getConversationDetails = async (
+  conversationId: string
+): Promise<ConversationDetails> => {
+  const response = await apiClient.get(`/api/v1/messages/conversations/${conversationId}`);
+  return unwrapData<ConversationDetails>(response.data);
 };
 
-export const getMessages = async (conversationId: string, params?: CursorParams) => {
+export const getMessages = async (
+  conversationId: string,
+  params?: CursorParams
+): Promise<Message[]> => {
   try {
-    return await apiClient.get<Message[]>(`/api/v1/messages/${conversationId}`, { params });
+    const response = await apiClient.get(`/api/v1/messages/${conversationId}`, { params });
+    return unwrapItems<Message>(response.data);
   } catch (error) {
     if (isMessagesUnavailable(error)) {
-      return {
-        data: [],
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as any,
-      };
+      return [];
     }
     throw error;
   }
 };
 
-export const sendMessage = async (conversationId: string, content: string) => {
-  return apiClient.post<Message>(`/api/v1/messages/${conversationId}`, { content });
+export const sendMessage = async (
+  conversationId: string,
+  content: string
+): Promise<Message> => {
+  const response = await apiClient.post(`/api/v1/messages/${conversationId}`, { content });
+  return unwrapData<Message>(response.data);
 };
 
-export const markAsRead = async (conversationId: string, messageId: string) => {
-  return apiClient.post(`/api/v1/messages/${conversationId}/read/${messageId}`);
+export const markAsRead = async (conversationId: string, messageId: string): Promise<void> => {
+  await apiClient.post(`/api/v1/messages/${conversationId}/read/${messageId}`);
 };
 
-export const deleteMessage = async (messageId: string) => {
-  return apiClient.delete(`/api/v1/messages/${messageId}`);
+export const deleteMessage = async (messageId: string): Promise<void> => {
+  await apiClient.delete(`/api/v1/messages/${messageId}`);
 };
 
-export const startConversation = async (userId: string) => {
-  return apiClient.post<Conversation>('/api/v1/messages/conversations', { userId });
+export const startConversation = async (
+  userId: string
+): Promise<{ conversation_id: string }> => {
+  const response = await apiClient.post('/api/v1/messages/conversations', { userId });
+  return unwrapData<{ conversation_id: string }>(response.data);
 };

@@ -1,6 +1,6 @@
 export interface Notification {
   id: string;
-  type: 'LIKE' | 'COMMENT' | 'FOLLOW' | 'MENTION' | 'SYSTEM';
+  type: 'LIKE' | 'COMMENT' | 'FOLLOW' | 'MENTION' | 'SYSTEM' | 'SHARE';
   title: string;
   body: string;
   data?: Record<string, any>;
@@ -8,6 +8,8 @@ export interface Notification {
   created_at: string;
   updated_at: string;
   user_id: string;
+  entity_type?: 'post' | 'comment' | 'user' | 'system' | 'POST' | 'COMMENT' | 'USER' | 'SYSTEM';
+  entity_id?: string;
   actor?: {
     id: string;
     username: string;
@@ -25,8 +27,8 @@ export interface NotificationPreference {
   follows_email: boolean;
   mentions_push: boolean;
   mentions_email: boolean;
-  quiet_hours_start?: string | null;
-  quiet_hours_end?: string | null;
+  quiet_hours_start: string | null;
+  quiet_hours_end: string | null;
 }
 
 export interface UpdateNotificationPreferenceRequest {

@@ -1,3 +1,12 @@
+export type {
+  ApiEnvelope,
+  ApiFailure,
+  ApiSuccess,
+  CursorPage,
+  OffsetPage,
+  PostDto,
+} from '@social-media/shared';
+
 /**
  * Post Service — Type Definitions
  *
@@ -188,22 +197,5 @@ export interface ModerationStatusUpdatedEvent extends BaseKafkaEvent {
   };
 }
 
-// ─── API Response ─────────────────────────────────────────────────────────────
+// Canonical API envelopes and pagination types are exported from @social-media/shared.
 
-export interface ApiResponse<T = unknown> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  code?: string;
-}
-
-export interface PaginatedPostsResponse {
-  success: true;
-  data: Post[];
-  cursor?: string;
-  hasMore: boolean;
-  pagination: {
-    hasMore: boolean;
-    cursor?: string;
-  };
-}

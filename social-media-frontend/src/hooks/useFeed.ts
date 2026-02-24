@@ -3,6 +3,7 @@ import { getFeed } from '@/api/feed';
 import { FeedPost } from '@/types/feed.types';
 import { useInfiniteScroll } from './useInfiniteScroll';
 import { useAuth } from './useAuth';
+import { unwrapData } from '@/api/envelope';
 
 export const useFeed = (initialParams?: any) => {
   const [posts, setPosts] = useState<FeedPost[]>([]);
@@ -26,7 +27,7 @@ export const useFeed = (initialParams?: any) => {
         ...initialParams,
       });
 
-      const payload = response.data?.data ?? response.data;
+      const payload = unwrapData<any>(response.data);
       const newPosts = Array.isArray(payload?.items)
         ? payload.items
         : Array.isArray(payload?.data)

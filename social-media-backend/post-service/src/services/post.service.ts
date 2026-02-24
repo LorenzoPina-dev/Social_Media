@@ -17,10 +17,10 @@ import {
   UpdatePostDto,
   ListPostsQuery,
   CursorData,
+  CursorPage,
   PostNotFoundError,
   PostForbiddenError,
   ValidationError,
-  PaginatedPostsResponse,
 } from '../types';
 
 // L1 in-process cache (TTL 60s, max 1000 entries)
@@ -143,7 +143,7 @@ export class PostService {
     userId: string,
     requesterId: string | undefined,
     query: ListPostsQuery,
-  ): Promise<PaginatedPostsResponse> {
+  ): Promise<CursorPage<Post>> {
     const limit = Math.min(query.limit || config.PAGINATION.DEFAULT_PAGE_SIZE, config.PAGINATION.MAX_PAGE_SIZE);
     const includePrivate = userId === requesterId;
 
@@ -168,13 +168,7 @@ export class PostService {
       ).toString('base64');
     }
 
-    return {
-      success: true,
-      data,
-      cursor: nextCursor,
-      hasMore,
-      pagination: { hasMore, cursor: nextCursor },
-    };
+    return { items: data, cursor: nextCursor, has_more: hasMore };
   }
 
   // ─── UPDATE ───────────────────────────────────────────────────────────────
@@ -281,7 +275,7 @@ export class PostService {
   async listSavedPosts(
     userId: string,
     query: ListPostsQuery
-  ): Promise<PaginatedPostsResponse> {
+  ): Promise<CursorPage<Post>> {
     const limit = Math.min(query.limit || config.PAGINATION.DEFAULT_PAGE_SIZE, config.PAGINATION.MAX_PAGE_SIZE);
 
     let cursor: { created_at: string; post_id: string } | undefined;
@@ -319,15 +313,6 @@ export class PostService {
       ).toString('base64');
     }
 
-    return {
-      success: true,
-      data: orderedPosts,
-      cursor: nextCursor,
-      hasMore,
-      pagination: {
-        hasMore,
-        cursor: nextCursor,
-      },
-    };
+    return { items: orderedPosts, cursor: nextCursor, has_more: hasMore };
   }
 }

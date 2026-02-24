@@ -9,7 +9,7 @@ import styles from './ProfileHeader.module.css';
 interface ProfileHeaderProps {
   profile: Profile;
   isOwnProfile: boolean;
-  onUpdateProfile?: (data: any) => Promise<Profile | undefined>;
+  onUpdateProfile?: (data: any) => Promise<void>;
   onFollow?: () => void;
   onUnfollow?: () => void;
 }

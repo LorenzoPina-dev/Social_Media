@@ -8,6 +8,7 @@ import {
   unlikeComment,
   getCommentThread,
 } from '@/api/interactions';
+import { unwrapData, unwrapItems } from '@/api/envelope';
 import { useAuth } from './useAuth';
 import toast from 'react-hot-toast';
 
@@ -31,10 +32,10 @@ export const useComments = (postId: string) => {
         cursor: reset ? undefined : cursor || undefined,
         limit: 20,
       });
-      
-      const payload = response.data?.data ?? response.data;
-      const newComments = Array.isArray(payload) ? payload : [];
-      const newCursor = response.data?.pagination?.cursor ?? response.data?.cursor ?? null;
+
+      const payload = unwrapData<any>(response.data);
+      const newComments = unwrapItems<Comment>(response.data);
+      const newCursor = payload?.pagination?.cursor ?? payload?.cursor ?? null;
       
       setComments(prev => reset ? newComments : [...prev, ...newComments]);
       setCursor(newCursor || null);
@@ -56,8 +57,8 @@ export const useComments = (postId: string) => {
     
     try {
       const response = await createComment(postId, { content, parent_id: parentId });
-      
-      const newComment = response.data?.data ?? response.data;
+
+      const newComment = unwrapData<Comment>(response.data);
       
       if (parentId) {
         // Aggiungi come risposta al commento padre
@@ -111,6 +112,7 @@ export const useComments = (postId: string) => {
     if (!comment) return;
     
     const wasLiked = comment.is_liked;
+    const currentLikeCount = comment.like_count ?? comment.likes_count ?? 0;
     
     // Optimistic update
     setComments(prev =>
@@ -119,7 +121,7 @@ export const useComments = (postId: string) => {
           ? {
               ...c,
               is_liked: !wasLiked,
-              like_count: wasLiked ? c.like_count - 1 : c.like_count + 1,
+              like_count: wasLiked ? currentLikeCount - 1 : currentLikeCount + 1,
             }
           : c
       )
@@ -139,7 +141,7 @@ export const useComments = (postId: string) => {
             ? {
                 ...c,
                 is_liked: wasLiked,
-                like_count: wasLiked ? c.like_count + 1 : c.like_count - 1,
+                like_count: wasLiked ? currentLikeCount + 1 : currentLikeCount - 1,
               }
             : c
         )
@@ -151,12 +153,12 @@ export const useComments = (postId: string) => {
   const loadReplies = useCallback(async (commentId: string) => {
     try {
       const response = await getCommentThread(commentId);
-      const replies = response.data?.data ?? response.data;
+      const replies = unwrapItems<Comment>(response.data);
       
       setComments(prev =>
         prev.map(comment =>
           comment.id === commentId
-            ? { ...comment, replies: Array.isArray(replies) ? replies : [] }
+            ? { ...comment, replies }
             : comment
         )
       );

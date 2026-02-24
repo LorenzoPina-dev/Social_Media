@@ -10,6 +10,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { PostService } from '../services/post.service';
 import { HashtagService } from '../services/hashtag.service';
+import { ok, created, noContent } from '@social-media/shared';
 
 export class PostController {
   constructor(
@@ -24,7 +25,7 @@ export class PostController {
     try {
       const userId = req.user!.id;
       const post = await this.postService.createPost(userId, req.body);
-      res.status(201).json({ success: true, data: post });
+      created(res, post);
     } catch (error) {
       next(error);
     }
@@ -38,7 +39,7 @@ export class PostController {
       const { id } = req.params;
       const requesterId = req.user?.id;
       const post = await this.postService.getPost(id, requesterId);
-      res.json({ success: true, data: post });
+      ok(res, post);
     } catch (error) {
       next(error);
     }
@@ -52,7 +53,7 @@ export class PostController {
       const { id } = req.params;
       const userId = req.user!.id;
       const post = await this.postService.updatePost(id, userId, req.body);
-      res.json({ success: true, data: post });
+      ok(res, post);
     } catch (error) {
       next(error);
     }
@@ -66,7 +67,7 @@ export class PostController {
       const { id } = req.params;
       const userId = req.user!.id;
       await this.postService.deletePost(id, userId);
-      res.status(204).send();
+      noContent(res);
     } catch (error) {
       next(error);
     }
@@ -84,7 +85,7 @@ export class PostController {
         cursor,
         limit: limit ? parseInt(limit, 10) : undefined,
       });
-      res.json(result);
+      ok(res, result);
     } catch (error) {
       next(error);
     }
@@ -97,7 +98,7 @@ export class PostController {
     try {
       const limit = parseInt((req.query.limit as string) || '10', 10);
       const hashtags = await this.hashtagService.getTrending(limit);
-      res.json({ success: true, data: hashtags });
+      ok(res, hashtags);
     } catch (error) {
       next(error);
     }
@@ -111,7 +112,7 @@ export class PostController {
       const { id } = req.params;
       const requesterId = req.user!.id;
       const history = await this.postService.getEditHistory(id, requesterId);
-      res.json({ success: true, data: history });
+      ok(res, history);
     } catch (error) {
       next(error);
     }
@@ -125,7 +126,7 @@ export class PostController {
       const { id } = req.params;
       const userId = req.user!.id;
       await this.postService.savePost(id, userId);
-      res.json({ success: true, message: 'Post saved successfully' });
+      ok(res, { saved: true }, 'Post saved successfully');
     } catch (error) {
       next(error);
     }
@@ -139,7 +140,7 @@ export class PostController {
       const { id } = req.params;
       const userId = req.user!.id;
       await this.postService.unsavePost(id, userId);
-      res.status(204).send();
+      noContent(res);
     } catch (error) {
       next(error);
     }
@@ -156,7 +157,7 @@ export class PostController {
         cursor,
         limit: limit ? parseInt(limit, 10) : undefined,
       });
-      res.json(result);
+      ok(res, result);
     } catch (error) {
       next(error);
     }

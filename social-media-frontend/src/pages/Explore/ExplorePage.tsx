@@ -9,6 +9,7 @@ import { FeedPost } from '@/types/feed.types';
 import { Profile } from '@/types/user.types';
 import { Post } from '@/types/post.types';
 import { Hashtag } from '@/types/post.types';
+import { unwrapData, unwrapItems } from '@/api/envelope';
 import styles from './ExplorePage.module.css';
 
 const ExplorePage = () => {
@@ -46,7 +47,7 @@ const ExplorePage = () => {
     setIsLoadingTrending(true);
     try {
       const response = await getTrendingFeed('day');
-      const payload = response.data?.data ?? response.data;
+      const payload = unwrapData<any>(response.data);
       const items = payload?.items ?? payload?.data ?? [];
       setTrendingPosts(Array.isArray(items) ? items : []);
     } catch (error) {
@@ -64,9 +65,9 @@ const ExplorePage = () => {
         searchPosts({ q: query, limit: 10 }),
         searchHashtags(query),
       ]);
-      setUsers(usersRes.data?.data ?? usersRes.data?.items ?? usersRes.data ?? []);
-      setPosts(postsRes.data?.data ?? postsRes.data?.items ?? postsRes.data ?? []);
-      setHashtags(hashtagsRes.data?.data ?? hashtagsRes.data?.items ?? hashtagsRes.data ?? []);
+      setUsers(unwrapItems<Profile>(usersRes.data));
+      setPosts(unwrapItems<Post>(postsRes.data));
+      setHashtags(unwrapItems<Hashtag>(hashtagsRes.data));
     } catch (error) {
       console.error('Search failed:', error);
     } finally {

@@ -1,9 +1,15 @@
 FROM node:20-alpine AS builder
 
-WORKDIR /app
-COPY package*.json ./
+WORKDIR /app/shared
+COPY shared/package*.json ./
+RUN npm install
+COPY shared/ ./
+RUN npm run build
+
+WORKDIR /app/interaction-service
+COPY interaction-service/package*.json ./
 RUN npm ci
-COPY . .
+COPY interaction-service/ ./
 
 # 1) Compila src/ → dist/
 RUN npm run build
@@ -16,11 +22,15 @@ FROM node:20-alpine
 
 RUN apk add --no-cache netcat-openbsd
 
-WORKDIR /app
-COPY package*.json ./
+WORKDIR /app/shared
+COPY shared/package*.json ./
+COPY --from=builder /app/shared/dist ./dist
+
+WORKDIR /app/interaction-service
+COPY interaction-service/package*.json ./
 RUN npm ci --omit=dev
 
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/interaction-service/dist ./dist
 
 ENV NODE_ENV=production
 EXPOSE 3001

@@ -251,8 +251,8 @@ services:
     <<: *common-service
     container_name: social-auth-service
     build:
-      context: ./auth-service  # Il contesto è la cartella del servizio
-      dockerfile: Dockerfile   # Il Dockerfile dentro quella cartella
+      context: .               # monorepo context (include /shared)
+      dockerfile: ./auth-service/Dockerfile
     volumes:
       - ./auth-service/src:/app/src:delegated
       - ./auth-service/migrations:/app/migrations:delegated
@@ -298,8 +298,8 @@ services:
     <<: *common-service
     container_name: social-user-service
     build:
-      context: ./user-service  # Il contesto è la cartella del servizio
-      dockerfile: Dockerfile   # Il Dockerfile dentro quella cartella
+      context: .               # monorepo context (include /shared)
+      dockerfile: ./user-service/Dockerfile
     volumes:
       - ./user-service/src:/app/src:delegated
       - ./user-service/migrations:/app/migrations:delegated
@@ -342,8 +342,8 @@ services:
     <<: *common-service
     container_name: social-post-service
     build:
-      context: ./post-service  # Il contesto è la cartella del servizio
-      dockerfile: Dockerfile   # Il Dockerfile dentro quella cartella
+      context: .               # monorepo context (include /shared)
+      dockerfile: ./post-service/Dockerfile
     volumes:
       - ./post-service/src:/app/src:delegated
       - ./post-service/migrations:/app/migrations:delegated
@@ -379,8 +379,8 @@ services:
     <<: *common-service
     container_name: social-media-service
     build:
-      context: ./media-service  # Il contesto è la cartella del servizio
-      dockerfile: Dockerfile   # Il Dockerfile dentro quella cartella
+      context: .               # monorepo context (include /shared)
+      dockerfile: ./media-service/Dockerfile
     volumes:
       - ./media-service/src:/app/src:delegated
       - ./media-service/migrations:/app/migrations:delegated
@@ -426,8 +426,8 @@ services:
     <<: *common-service
     container_name: social-interaction-service
     build:
-      context: ./interaction-service  # Il contesto è la cartella del servizio
-      dockerfile: Dockerfile   # Il Dockerfile dentro quella cartella
+      context: .               # monorepo context (include /shared)
+      dockerfile: ./interaction-service/Dockerfile
     volumes:
       - ./interaction-service/src:/app/src:delegated
       - ./interaction-service/migrations:/app/migrations:delegated
@@ -498,8 +498,8 @@ services:
     <<: *common-service
     container_name: social-notification-service
     build:
-      context: ./notification-service
-      dockerfile: Dockerfile 
+      context: .               # monorepo context (include /shared)
+      dockerfile: ./notification-service/Dockerfile
     volumes:
       - ./notification-service/src:/app/src:delegated
       - ./notification-service/migrations:/app/migrations:delegated
@@ -578,8 +578,8 @@ services:
     <<: *common-service
     container_name: social-moderation-service
     build:
-      context: ./moderation-service
-      dockerfile: Dockerfile 
+      context: .               # monorepo context (include /shared)
+      dockerfile: ./moderation-service/Dockerfile
     volumes:
       - ./moderation-service/src:/app/src:delegated
       - ./moderation-service/migrations:/app/migrations:delegated

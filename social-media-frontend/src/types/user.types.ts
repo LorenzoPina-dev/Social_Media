@@ -5,10 +5,14 @@ export interface Profile {
   bio?: string;
   avatar_url?: string;
   cover_url?: string;
+  website_url?: string;
+  location?: string;
   verified: boolean;
   followers_count: number;
   following_count: number;
   posts_count: number;
+  follower_count?: number;
+  post_count?: number;
   is_following?: boolean;
   is_follower?: boolean;
   created_at: string;

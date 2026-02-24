@@ -3,7 +3,6 @@ import {
   Post,
   CreatePostRequest,
   UpdatePostRequest,
-  Hashtag,
   TrendingHashtag,
   PostHistory,
 } from '@/types/post.types';

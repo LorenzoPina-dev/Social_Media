@@ -1,6 +1,7 @@
 // client.ts
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { refreshToken } from './auth';
+import { unwrapData } from './envelope';
 
 const rawApiBaseUrl = import.meta.env.VITE_API_GATEWAY_URL || '';
 const API_BASE_URL =
@@ -92,9 +93,10 @@ apiClient.interceptors.response.use(
 
       console.log('Refreshing token...');
       const response = await refreshToken({ refreshToken: refreshTokenValue });
+      const tokenData = unwrapData<{ access_token: string; refresh_token: string }>(response.data);
       
-      const newAccessToken = response.data.data.access_token;
-      const newRefreshToken = response.data.data.refresh_token;
+      const newAccessToken = tokenData.access_token;
+      const newRefreshToken = tokenData.refresh_token;
       
       console.log('New tokens received');
       

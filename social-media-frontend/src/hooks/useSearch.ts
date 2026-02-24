@@ -3,6 +3,7 @@ import { Profile } from '@/types/user.types';
 import { Post } from '@/types/post.types';
 import { Hashtag } from '@/types/post.types';
 import { searchUsers, searchPosts, searchHashtags } from '@/api/search';
+import { unwrapItems } from '@/api/envelope';
 
 interface UseSearchReturn {
   users: Profile[];
@@ -37,9 +38,9 @@ export const useSearch = (): UseSearchReturn => {
         searchHashtags(query),
       ]);
 
-      setUsers(usersRes.data?.data ?? usersRes.data?.items ?? usersRes.data ?? []);
-      setPosts(postsRes.data?.data ?? postsRes.data?.items ?? postsRes.data ?? []);
-      setHashtags(hashtagsRes.data?.data ?? hashtagsRes.data?.items ?? hashtagsRes.data ?? []);
+      setUsers(unwrapItems<Profile>(usersRes.data));
+      setPosts(unwrapItems<Post>(postsRes.data));
+      setHashtags(unwrapItems<Hashtag>(hashtagsRes.data));
     } catch (err) {
       setError(err as Error);
     } finally {

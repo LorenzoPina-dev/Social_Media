@@ -1,6 +1,6 @@
 import { apiClient } from './client';
 import { PaginatedResponse, CursorParams } from '@/types/api.types';
-import { Comment, Like, Share } from '@/types/interaction.types';
+import { Comment, Share } from '@/types/interaction.types';
 
 // Comments
 export const getComments = async (postId: string, params?: CursorParams) => {
@@ -22,7 +22,7 @@ export const createComment = async (
 // Alias for createComment if addComment is also used
 export const addComment = createComment;
 
-export const updateComment = async (commentId: string, content: string) => {
+export const updateComment = async (_commentId: string, _content: string) => {
   return Promise.reject(new Error('Comment update endpoint is not implemented in backend'));
 };
 

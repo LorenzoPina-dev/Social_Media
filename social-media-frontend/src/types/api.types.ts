@@ -1,3 +1,5 @@
+import type { ApiEnvelope } from '@/types/contracts';
+
 export interface CursorParams {
   cursor?: string;
   limit?: number;
@@ -9,12 +11,20 @@ export interface OffsetParams {
 }
 
 export interface PaginatedResponse<T> {
-  items: T[];
+  data?: T[];
+  items?: T[];
   total?: number;
   cursor?: string;
   offset?: number;
   limit?: number;
-  has_more: boolean;
+  has_more?: boolean;
+  hasMore?: boolean;
+  pagination?: {
+    cursor?: string;
+    has_more?: boolean;
+    hasMore?: boolean;
+    total?: number;
+  };
 }
 
 export interface ErrorResponse {
@@ -25,9 +35,11 @@ export interface ErrorResponse {
   path?: string;
 }
 
-export interface ApiResponse<T = any> {
-  data: T;
-  status: number;
-  message?: string;
-  timestamp: string;
-}
+export type ApiResponse<T = unknown> =
+  | ApiEnvelope<T>
+  | {
+      data: T;
+      status: number;
+      message?: string;
+      timestamp?: string;
+    };

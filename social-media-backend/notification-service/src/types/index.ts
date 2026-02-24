@@ -134,6 +134,16 @@ export interface FollowCreatedEvent extends KafkaBaseEvent {
   payload: { followingId: string };
 }
 
+export interface MessageSentEvent extends KafkaBaseEvent {
+  type: 'message_sent';
+  payload: {
+    recipientId: string;
+    conversationId: string;
+    messageId: string;
+    content: string;
+  };
+}
+
 export interface UserDeletedEvent extends KafkaBaseEvent {
   type: 'user_deleted';
 }
@@ -156,7 +166,7 @@ export interface ContentApprovedEvent extends KafkaBaseEvent {
 }
 
 export type InteractionEvent = LikeCreatedEvent | CommentCreatedEvent | ShareCreatedEvent;
-export type UserEvent = FollowCreatedEvent | UserDeletedEvent;
+export type UserEvent = FollowCreatedEvent | MessageSentEvent | UserDeletedEvent;
 export type PostEvent = PostCreatedEvent;
 export type ModerationEvent = ContentRejectedEvent | ContentApprovedEvent;
 

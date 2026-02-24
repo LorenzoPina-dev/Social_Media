@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import { FeedPost, FeedResponse, TrendingFeedResponse } from '@/types/feed.types';
+import { FeedResponse, TrendingFeedResponse } from '@/types/feed.types';
 import { CursorParams } from '@/types/api.types';
 
 export const getFeed = async (params?: CursorParams) => {

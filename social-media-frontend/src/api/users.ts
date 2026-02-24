@@ -1,5 +1,6 @@
 import { apiClient } from './client';
 import { jwtDecode } from 'jwt-decode';
+import { AxiosError } from 'axios';
 import {
   Profile,
   UpdateProfileRequest,
@@ -112,11 +113,45 @@ export const getSuggestedUsers = async (params?: { limit?: number; q?: string })
 
 // Followers
 export const followUser = async (userId: string) => {
-  return apiClient.post(`/api/v1/users/${userId}/follow`);
+  try {
+    return await apiClient.post(`/api/v1/users/${userId}/follow`);
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    if (
+      axiosError.response?.status === 400 &&
+      axiosError.response?.data?.message === 'You are already following this user'
+    ) {
+      return {
+        data: { success: true, message: 'Already following' },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as any,
+      };
+    }
+    throw error;
+  }
 };
 
 export const unfollowUser = async (userId: string) => {
-  return apiClient.delete(`/api/v1/users/${userId}/follow`);
+  try {
+    return await apiClient.delete(`/api/v1/users/${userId}/follow`);
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    if (
+      axiosError.response?.status === 400 &&
+      axiosError.response?.data?.message === 'You are not following this user'
+    ) {
+      return {
+        data: { success: true, message: 'Already unfollowed' },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as any,
+      };
+    }
+    throw error;
+  }
 };
 
 export const getFollowers = async (userId: string, params?: CursorParams) => {
@@ -144,7 +179,7 @@ export const getUserStats = async (userId: string) => {
 };
 
 // Privacy Settings
-export const getPrivacySettings = async (userId?: string) => {
+export const getPrivacySettings = async (_userId?: string) => {
   // Backend user-service currently does not expose /users/:id/privacy
   return Promise.resolve({
     data: {
@@ -159,7 +194,7 @@ export const getPrivacySettings = async (userId?: string) => {
   } as any);
 };
 
-export const updatePrivacySettings = async (settingsOrUserId: string | PrivacySettings, maybeSettings?: PrivacySettings) => {
+export const updatePrivacySettings = async (settingsOrUserId: string | PrivacySettings | any, maybeSettings?: PrivacySettings | any) => {
   const settings =
     typeof settingsOrUserId === 'string' ? maybeSettings : settingsOrUserId;
   return Promise.resolve({ data: settings } as any);
@@ -189,3 +224,4 @@ export const getDataDeletionStatus = async (userId?: string) => {
 export const getCurrentUser = async () => {
   return apiClient.get('/api/v1/users/me');
 };
+

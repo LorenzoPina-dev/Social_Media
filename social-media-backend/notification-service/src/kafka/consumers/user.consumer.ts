@@ -8,7 +8,12 @@
 
 import { NotificationService } from '../../services/notification.service';
 import { logger } from '../../utils/logger';
-import { FollowCreatedEvent, UserDeletedEvent, KafkaBaseEvent } from '../../types';
+import {
+  FollowCreatedEvent,
+  UserDeletedEvent,
+  KafkaBaseEvent,
+  MessageSentEvent,
+} from '../../types';
 
 export class UserEventConsumer {
   constructor(private readonly notificationService: NotificationService) {}
@@ -25,7 +30,11 @@ export class UserEventConsumer {
   private async handle(event: KafkaBaseEvent): Promise<void> {
     switch (event.type) {
       case 'follow_created':
+      case 'user_followed':
         await this.handleFollowCreated(event as FollowCreatedEvent);
+        break;
+      case 'message_sent':
+        await this.handleMessageSent(event as MessageSentEvent);
         break;
       case 'user_deleted':
       case 'user_permanently_deleted':
@@ -37,7 +46,9 @@ export class UserEventConsumer {
   }
 
   private async handleFollowCreated(event: FollowCreatedEvent): Promise<void> {
-    const followingId = event.payload?.followingId;
+    const followingId = (event.payload?.followingId || (event as any).followingId) as
+      | string
+      | undefined;
     if (!followingId) return;
 
     // Non notificare se si segue se stessi (caso edge)
@@ -54,6 +65,23 @@ export class UserEventConsumer {
     });
 
     logger.debug('FollowCreated notification handled', { followingId, follower: event.userId });
+  }
+
+  private async handleMessageSent(event: MessageSentEvent): Promise<void> {
+    const recipientId = event.payload?.recipientId;
+    if (!recipientId) return;
+
+    if (recipientId === event.userId) return;
+
+    await this.notificationService.notify({
+      recipientId,
+      actorId: event.userId,
+      type: 'SYSTEM',
+      entityId: event.payload.conversationId,
+      entityType: 'USER',
+      title: 'Nuovo messaggio',
+      body: 'Hai ricevuto un nuovo messaggio',
+    });
   }
 
   /**

@@ -21,13 +21,13 @@ interface Message {
   sender_id: string;
   content: string;
   created_at: string;
-  read_at: string | null;
+  read_at?: string | null;
 }
 
 interface Participant {
   id: string;
   username: string;
-  display_name: string;
+  display_name?: string;
   avatar_url: string | null;
   verified: boolean;
   is_online?: boolean;
@@ -115,17 +115,17 @@ export const Conversation: React.FC = () => {
         getMessages(conversationId!),
         getConversationDetails(conversationId!),
       ]);
-      setMessages(messagesRes.data);
-      setParticipant(detailsRes.data.participant);
+      setMessages(messagesRes);
+      setParticipant(detailsRes.participant as Participant);
       
       // Mark messages as read
-      if (messagesRes.data.length > 0) {
-        const unreadMessages = messagesRes.data.filter(
+      if (messagesRes.length > 0) {
+        const unreadMessages = messagesRes.filter(
           (m) => m.sender_id !== user?.id && !m.read_at
         );
         for (const msg of unreadMessages) {
           await markAsRead(conversationId!, msg.id);
-          socket?.emit('message:read', { conversationId, messageId: msg.id });
+          socket?.emit('message:read', { conversationId: conversationId!, messageId: msg.id });
         }
       }
     } catch (error) {
@@ -141,8 +141,7 @@ export const Conversation: React.FC = () => {
 
     setIsSending(true);
     try {
-      const response = await sendMessage(conversationId, content);
-      const newMessage = response.data;
+      const newMessage = await sendMessage(conversationId, content);
       
       setMessages((prev) => [...prev, newMessage]);
       socket?.emit('message:send', { conversationId, content });

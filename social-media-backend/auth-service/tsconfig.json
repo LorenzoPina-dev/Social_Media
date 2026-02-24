@@ -10,6 +10,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
+    "moduleResolution": "node",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
@@ -19,9 +20,7 @@
     "noFallthroughCasesInSwitch": true,
     "typeRoots": ["../node_modules/@types", "./node_modules/@types"]
   },
-  "files": [
-    "src/types/express.d.ts"
-  ],
+  "files": ["src/types/express.d.ts"],
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "tests"]
 }

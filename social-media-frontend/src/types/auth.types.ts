@@ -1,30 +1,21 @@
+import type { ApiEnvelope, LoginResultDto, TokenPairDto, UserDto } from '@/types/contracts';
+
 export interface LoginRequest {
   username: string;
-  password: string;
+  password?: string;
   mfa_code?: string;
 }
 
-export interface TokenPair {
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
-}
+export type TokenPair = TokenPairDto;
 
-export interface LoginResponseData {
-  user: User;
-  tokens: TokenPair;
-  mfa_required?: boolean;
-}
+export type LoginResponseData = LoginResultDto;
 
-export interface LoginResponse {
-  success: boolean;
-  data: LoginResponseData;
-}
+export type LoginResponse = ApiEnvelope<LoginResponseData>;
 
 export interface RegisterRequest {
   username: string;
   email: string;
-  password: string;
+  password?: string;
   display_name?: string;
 }
 
@@ -40,10 +31,7 @@ export interface RefreshTokenRequest {
   refreshToken: string;
 }
 
-export interface RefreshTokenResponse {
-  success: boolean;
-  data: TokenPair;
-}
+export type RefreshTokenResponse = ApiEnvelope<TokenPair>;
 
 export interface MFASetupResponse {
   secret: string;
@@ -67,15 +55,16 @@ export interface ForgotPasswordRequest {
 
 export interface ResetPasswordRequest {
   token: string;
-  password: string;
-  confirm_password: string;
+  password?: string;
+  newPassword?: string;
+  confirm_password?: string;
 }
 
 export interface LogoutRequest {
   refresh_token: string;
 }
 
-export interface User {
+export interface User extends UserDto {
   id: string;
   username: string;
   email: string;
@@ -86,3 +75,4 @@ export interface User {
   created_at: string;
   updated_at: string;
 }
+

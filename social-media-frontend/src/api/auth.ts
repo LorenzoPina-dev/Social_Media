@@ -1,8 +1,10 @@
 // auth.ts
 import { apiClient } from './client';
+import { unwrapData } from './envelope';
 import {
   LoginRequest,
   LoginResponse,
+  LoginResponseData,
   RegisterRequest,
   RefreshTokenRequest,
   RefreshTokenResponse,
@@ -15,9 +17,10 @@ import {
 
 export const login = async (data: LoginRequest) => {
   const response = await apiClient.post<LoginResponse>('/api/v1/auth/login', data);
+  const loginData = unwrapData<LoginResponseData>(response.data);
   
   // Dopo il login, impostiamo l'header Authorization
-  const accessToken = response.data.data.tokens.access_token;
+  const accessToken = loginData.tokens.access_token;
   if (accessToken) {
     apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
     console.log('Auth header impostato dopo login:', apiClient.defaults.headers.common['Authorization']);
@@ -57,12 +60,12 @@ export const verifyMFA = async (data: MFAVerifyRequest) => {
   return apiClient.post('/api/v1/mfa/verify', { code: data.code });
 };
 
-export const disableMFA = async (code: string) => {
-  return apiClient.post('/api/v1/mfa/disable', { code });
+export const disableMFA = async (code?: string) => {
+  return apiClient.post('/api/v1/mfa/disable', code ? { code } : {});
 };
 
-export const regenerateMFACodes = async (code: string) => {
-  return apiClient.post('/api/v1/mfa/regenerate-codes', { code });
+export const regenerateMFACodes = async (code?: string) => {
+  return apiClient.post('/api/v1/mfa/regenerate-codes', code ? { code } : {});
 };
 
 export const getMFAStatus = async () => {
@@ -75,5 +78,8 @@ export const forgotPassword = async (data: ForgotPasswordRequest) => {
 };
 
 export const resetPassword = async (data: ResetPasswordRequest) => {
-  return apiClient.post('/api/v1/auth/reset-password', data);
+  return apiClient.post('/api/v1/auth/reset-password', {
+    ...data,
+    password: data.password || data.newPassword,
+  });
 };
