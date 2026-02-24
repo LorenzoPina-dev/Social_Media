@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/common/Buttons/Button';
-import { followUser, unfollowUser } from '@/api/users';
+import { checkFollow, followUser, unfollowUser } from '@/api/users';
 import { useAuth } from '@/hooks/useAuth';
 import toast from 'react-hot-toast';
 import styles from './FollowButton.module.css';
+import { unwrapData } from '@/api/envelope';
 
 interface FollowButtonProps {
   userId: string;
@@ -21,10 +22,38 @@ export const FollowButton: React.FC<FollowButtonProps> = ({
   size = 'medium',
 }) => {
   const [following, setFollowing] = useState(initialFollowing);
+  const [hasResolvedStatus, setHasResolvedStatus] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { isAuthenticated, user } = useAuth();
 
   const isOwnProfile = user?.id === userId;
+
+  useEffect(() => {
+    setFollowing(initialFollowing);
+  }, [initialFollowing]);
+
+  useEffect(() => {
+    const resolveFollowStatus = async () => {
+      if (!isAuthenticated || !user?.id || isOwnProfile) {
+        setHasResolvedStatus(true);
+        return;
+      }
+
+      try {
+        const response = await checkFollow(user.id, userId);
+        const data = unwrapData<{ isFollowing?: boolean }>(response.data);
+        if (typeof data?.isFollowing === 'boolean') {
+          setFollowing(data.isFollowing);
+        }
+      } catch {
+        // Keep optimistic/UI-provided state if status check fails
+      } finally {
+        setHasResolvedStatus(true);
+      }
+    };
+
+    resolveFollowStatus();
+  }, [isAuthenticated, isOwnProfile, user?.id, userId]);
 
   if (isOwnProfile) {
     return null;
@@ -61,10 +90,10 @@ export const FollowButton: React.FC<FollowButtonProps> = ({
       variant={following ? 'outline' : 'primary'}
       size={size}
       onClick={handleClick}
-      loading={isLoading}
+      loading={isLoading || (!hasResolvedStatus && isAuthenticated)}
       className={styles.followButton}
     >
-      {following ? 'Seguito' : 'Segui'}
+      {following ? 'Unfollow' : 'Segui'}
     </Button>
   );
 };

@@ -15,6 +15,7 @@ interface SearchResultsProps {
   posts?: Post[];
   hashtags?: Hashtag[];
   isLoading?: boolean;
+  onFollowChange?: (userId: string, isFollowing: boolean) => void;
   onUserClick?: (username: string) => void;
   onPostClick?: (postId: string) => void;
   onHashtagClick?: (tag: string) => void;
@@ -26,6 +27,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   posts = [],
   hashtags = [],
   isLoading = false,
+  onFollowChange,
   onUserClick,
   onPostClick,
   onHashtagClick,
@@ -56,6 +58,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
               key={user.id}
               user={user}
               onClick={() => onUserClick?.(user.username)}
+              onFollow={() => onFollowChange?.(user.id, true)}
+              onUnfollow={() => onFollowChange?.(user.id, false)}
             />
           ))}
           {posts.slice(0, 3).map((post) => (
@@ -82,6 +86,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           key={user.id}
           user={user}
           onClick={() => onUserClick?.(user.username)}
+          onFollow={() => onFollowChange?.(user.id, true)}
+          onUnfollow={() => onFollowChange?.(user.id, false)}
         />
       ));
     }

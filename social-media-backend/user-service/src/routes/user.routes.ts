@@ -28,12 +28,14 @@ const updateUserSchema = Joi.object({
 
   display_name: Joi.string()
     .max(100)
+    .allow('')
     .optional(),
 
   bio: Joi.string()
     .max(500)
+    .allow('')
     .optional(),
-
+    
   avatar_url: Joi.string()
     .uri()
     .optional(),

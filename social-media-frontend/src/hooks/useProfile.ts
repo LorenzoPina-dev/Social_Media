@@ -16,7 +16,7 @@ export const useProfile = (username?: string) => {
   const [error, setError] = useState<Error | null>(null);
   const [postsCursor, setPostsCursor] = useState<string | null>(null);
   const [hasMorePosts, setHasMorePosts] = useState(true);
-  
+
   const { user, updateUser } = useAuth();
   const navigate = useNavigate();
   const isOwnProfile = user?.username === username;
@@ -24,7 +24,7 @@ export const useProfile = (username?: string) => {
   const fetchProfile = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const response = await getUserProfile(username);
       setProfile(unwrapData<Profile>(response.data));
@@ -38,29 +38,32 @@ export const useProfile = (username?: string) => {
     }
   }, [username, navigate]);
 
-  const fetchPosts = useCallback(async (reset = false) => {
-    if (!profile?.id) return;
-    
-    setIsLoadingPosts(true);
-    
-    try {
-      const response = await getUserPosts(profile.id, {
-        cursor: reset ? undefined : postsCursor || undefined,
-        limit: 12,
-      });
-      const page = unwrapCursorPage<Post>(response.data);
-      const newPosts = page.items;
-      const newCursor = page.cursor;
-      
-      setPosts(prev => reset ? newPosts : [...prev, ...newPosts]);
-      setPostsCursor(newCursor || null);
-      setHasMorePosts(page.has_more);
-    } catch (err) {
-      console.error('Failed to load posts:', err);
-    } finally {
-      setIsLoadingPosts(false);
-    }
-  }, [profile?.id, postsCursor]);
+  const fetchPosts = useCallback(
+    async (reset = false) => {
+      if (!profile?.id) return;
+
+      setIsLoadingPosts(true);
+
+      try {
+        const response = await getUserPosts(profile.id, {
+          cursor: reset ? undefined : postsCursor || undefined,
+          limit: 12,
+        });
+        const page = unwrapCursorPage<Post>(response.data);
+        const newPosts = page.items;
+        const newCursor = page.cursor;
+
+        setPosts((prev) => (reset ? newPosts : [...prev, ...newPosts]));
+        setPostsCursor(newCursor || null);
+        setHasMorePosts(page.has_more);
+      } catch (err) {
+        console.error('Failed to load posts:', err);
+      } finally {
+        setIsLoadingPosts(false);
+      }
+    },
+    [profile?.id, postsCursor]
+  );
 
   useEffect(() => {
     if (username) {
@@ -72,56 +75,67 @@ export const useProfile = (username?: string) => {
     if (profile?.id) {
       fetchPosts(true);
     }
-  }, [profile?.id]);
+  }, [profile?.id, fetchPosts]);
 
-  const updateUserProfile = useCallback(async (data: any) => {
-    if (!isOwnProfile) return;
-    
-    try {
-      const response = await updateProfile(data);
-      const nextProfile = unwrapData<Profile>(response.data);
-      setProfile(nextProfile);
-      if (user) {
-        updateUser({ display_name: nextProfile.display_name, avatar_url: nextProfile.avatar_url });
+  const updateUserProfile = useCallback(
+    async (data: any) => {
+      if (!isOwnProfile) return;
+
+      try {
+        const response = await updateProfile(data);
+        const nextProfile = unwrapData<Profile>(response.data);
+        setProfile(nextProfile);
+        if (user) {
+          updateUser({
+            display_name: nextProfile.display_name,
+            avatar_url: nextProfile.avatar_url,
+          });
+        }
+        toast.success('Profilo aggiornato!');
+      } catch (err) {
+        toast.error("Errore durante l'aggiornamento");
+        throw err;
       }
-      toast.success('Profilo aggiornato!');
-    } catch (err) {
-      toast.error('Errore durante l\'aggiornamento');
-      throw err;
-    }
-  }, [isOwnProfile, user, updateUser]);
+    },
+    [isOwnProfile, user, updateUser]
+  );
 
   const follow = useCallback(async () => {
     if (!profile) return;
-    
+
     try {
       await followUser(profile.id);
-      const followersCount = (profile as any).followers_count ?? (profile as any).follower_count ?? 0;
+      const followersCount =
+        (profile as any).followers_count ?? (profile as any).follower_count ?? 0;
       setProfile({
         ...profile,
         is_following: true,
+        follower_count: followersCount + 1,
         followers_count: followersCount + 1,
       });
       toast.success(`Ora segui ${profile.username}`);
     } catch (err) {
-      
+      // handled by button/toast at call site
     }
   }, [profile]);
 
   const unfollow = useCallback(async () => {
     if (!profile) return;
-    
+
     try {
       await unfollowUser(profile.id);
-      const followersCount = (profile as any).followers_count ?? (profile as any).follower_count ?? 0;
+      const followersCount =
+        (profile as any).followers_count ?? (profile as any).follower_count ?? 0;
+      const nextCount = Math.max(0, followersCount - 1);
       setProfile({
         ...profile,
         is_following: false,
-        followers_count: Math.max(0, followersCount - 1),
+        follower_count: nextCount,
+        followers_count: nextCount,
       });
       toast.success(`Non segui più ${profile.username}`);
     } catch (err) {
-      
+      // handled by button/toast at call site
     }
   }, [profile]);
 
@@ -140,4 +154,3 @@ export const useProfile = (username?: string) => {
     unfollow,
   };
 };
-

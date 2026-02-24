@@ -8,7 +8,7 @@ import {
   getAutocompleteSuggestions,
   normalizeSuggestionItems,
 } from '@/api/search';
-import { searchUsers as searchUsersByUserService } from '@/api/users';
+import { getUsersBatch, searchUsers as searchUsersByUserService } from '@/api/users';
 import { unwrapItems } from '@/api/envelope';
 
 interface UseSearchReturn {
@@ -17,7 +17,8 @@ interface UseSearchReturn {
   hashtags: Hashtag[];
   isLoading: boolean;
   error: Error | null;
-  search: (query: string) => Promise<void>;
+  search: (query: string, options?: { silent?: boolean }) => Promise<void>;
+  setUserFollowState: (userId: string, isFollowing: boolean) => void;
   clear: () => void;
 }
 
@@ -62,13 +63,15 @@ export const useSearch = (): UseSearchReturn => {
       }));
   }, []);
 
-  const search = useCallback(async (query: string) => {
+  const search = useCallback(async (query: string, options?: { silent?: boolean }) => {
     if (!query.trim()) {
       clear();
       return;
     }
 
-    setIsLoading(true);
+    if (!options?.silent) {
+      setIsLoading(true);
+    }
     setError(null);
 
     try {
@@ -83,7 +86,55 @@ export const useSearch = (): UseSearchReturn => {
         indexedUsers.status === 'fulfilled' ? unwrapItems<Profile>(indexedUsers.value.data) : [];
       const fallbackUsersItems =
         fallbackUsers.status === 'fulfilled' ? unwrapItems<Profile>(fallbackUsers.value.data) : [];
-      const mergedUsers = (indexedUsersItems.length > 0 ? indexedUsersItems : fallbackUsersItems).slice(0, 10);
+      const fallbackById = new Map(fallbackUsersItems.map((u) => [u.id, u]));
+      const mergedUsersSource = indexedUsersItems.length > 0 ? indexedUsersItems : fallbackUsersItems;
+      const mergedUsers = mergedUsersSource
+        .map((user) => {
+          const fallbackUser = fallbackById.get(user.id);
+          const serverFollowersCount =
+            fallbackUser?.follower_count ??
+            fallbackUser?.followers_count ??
+            user.follower_count ??
+            user.followers_count ??
+            0;
+
+          return {
+            ...user,
+            is_following:
+              typeof fallbackUser?.is_following === 'boolean'
+                ? fallbackUser.is_following
+                : user.is_following,
+            follower_count: serverFollowersCount,
+            followers_count: serverFollowersCount,
+            post_count: fallbackUser?.post_count ?? fallbackUser?.posts_count ?? user.post_count,
+          };
+        })
+        .slice(0, 10);
+
+      // Hydrate counters from user-service canonical records to avoid
+      // stale count mismatch between search card and profile page.
+      const mergedUserIds = mergedUsers.map((u) => u.id).filter(Boolean);
+      let hydratedUsers = mergedUsers;
+      if (mergedUserIds.length > 0) {
+        const batchRes = await getUsersBatch(mergedUserIds);
+        const canonicalUsers = unwrapItems<Profile>(batchRes.data);
+        const canonicalById = new Map(canonicalUsers.map((u) => [u.id, u]));
+        hydratedUsers = mergedUsers.map((u) => {
+          const canonical = canonicalById.get(u.id);
+          if (!canonical) return u;
+          const canonicalFollowerCount =
+            canonical.follower_count ?? canonical.followers_count ?? u.follower_count ?? u.followers_count ?? 0;
+          const canonicalPostCount =
+            canonical.post_count ?? canonical.posts_count ?? u.post_count ?? u.posts_count ?? 0;
+          return {
+            ...u,
+            follower_count: canonicalFollowerCount,
+            followers_count: canonicalFollowerCount,
+            post_count: canonicalPostCount,
+            posts_count: canonicalPostCount,
+          };
+        });
+      }
 
       const postsItems = postsRes.status === 'fulfilled' ? unwrapItems<Post>(postsRes.value.data) : [];
 
@@ -92,15 +143,66 @@ export const useSearch = (): UseSearchReturn => {
           ? normalizeSuggestionItems(hashtagsSuggestRes.value.data).map((item) => item.text)
           : [];
 
-      setUsers(mergedUsers);
+      setUsers((prevUsers) => {
+        const prevById = new Map(prevUsers.map((u) => [u.id, u]));
+        return hydratedUsers.map((u) => {
+          const prev = prevById.get(u.id);
+          if (!prev) return u;
+
+          const localFollowing =
+            typeof prev.is_following === 'boolean' ? prev.is_following : u.is_following;
+          const serverFollowing = u.is_following;
+
+          const serverFollowersCount = u.follower_count ?? u.followers_count ?? 0;
+          const localFollowersCount = prev.follower_count ?? prev.followers_count ?? serverFollowersCount;
+
+          // If refresh returns a different follow-state than local optimistic state,
+          // keep local count to avoid counting follow/unfollow twice.
+          const effectiveFollowersCount =
+            typeof localFollowing === 'boolean' &&
+            typeof serverFollowing === 'boolean' &&
+            localFollowing !== serverFollowing
+              ? localFollowersCount
+              : serverFollowersCount;
+
+          return {
+            ...u,
+            is_following: localFollowing,
+            follower_count: effectiveFollowersCount,
+            followers_count: effectiveFollowersCount,
+          };
+        });
+      });
       setPosts(postsItems);
       setHashtags(buildHashtagResults(query, postsItems, hashtagsSuggestionTexts));
     } catch (err) {
       setError(err as Error);
     } finally {
-      setIsLoading(false);
+      if (!options?.silent) {
+        setIsLoading(false);
+      }
     }
   }, [buildHashtagResults]);
+
+  const setUserFollowState = useCallback((userId: string, isFollowing: boolean) => {
+    setUsers((prevUsers) =>
+      prevUsers.map((user) => {
+        if (user.id !== userId) return user;
+
+        const followersCount = user.follower_count ?? user.followers_count ?? 0;
+        const nextCount = isFollowing
+          ? followersCount + (user.is_following ? 0 : 1)
+          : Math.max(0, followersCount - (user.is_following ? 1 : 0));
+
+        return {
+          ...user,
+          is_following: isFollowing,
+          follower_count: nextCount,
+          followers_count: nextCount,
+        };
+      })
+    );
+  }, []);
 
   const clear = useCallback(() => {
     setUsers([]);
@@ -116,6 +218,7 @@ export const useSearch = (): UseSearchReturn => {
     isLoading,
     error,
     search,
+    setUserFollowState,
     clear,
   };
 };

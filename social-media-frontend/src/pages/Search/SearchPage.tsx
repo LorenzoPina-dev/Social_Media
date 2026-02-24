@@ -16,12 +16,23 @@ const SearchPage = () => {
     hashtags,
     isLoading,
     search,
+    setUserFollowState,
   } = useSearch();
 
   useEffect(() => {
     if (query) {
       search(query);
     }
+  }, [query, search]);
+
+  useEffect(() => {
+    if (!query) return;
+
+    const interval = setInterval(() => {
+      search(query, { silent: true });
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, [query, search]);
 
   return (
@@ -38,6 +49,7 @@ const SearchPage = () => {
           posts={posts}
           hashtags={hashtags}
           isLoading={isLoading}
+          onFollowChange={setUserFollowState}
           onUserClick={(username) => navigate(`/profile/${username}`)}
           onPostClick={(postId) => navigate(`/p/${postId}`)}
           onHashtagClick={(tag) => navigate(`/explore/tags/${tag}`)}

@@ -17,15 +17,16 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
       helper,
       maxLength,
       showCount = false,
-      value = '',
+      value,
       id,
       className = '',
+      defaultValue,
       ...props
     },
     ref
   ) => {
     const textareaId = id || `textarea-${Math.random().toString(36).substr(2, 9)}`;
-    const currentLength = String(value).length;
+    const currentLength = String(value ?? defaultValue ?? '').length;
 
     return (
       <div className={`${styles.container} ${className}`}>
@@ -48,6 +49,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
           className={`${styles.textarea} ${error ? styles.error : ''}`}
           maxLength={maxLength}
           value={value}
+          defaultValue={defaultValue}
           aria-invalid={!!error}
           {...props}
         />

@@ -6,9 +6,16 @@ import styles from './UserResult.module.css';
 interface UserResultProps {
   user: Profile;
   onClick?: () => void;
+  onFollow?: () => void;
+  onUnfollow?: () => void;
 }
 
-export const UserResult: React.FC<UserResultProps> = ({ user, onClick }) => {
+export const UserResult: React.FC<UserResultProps> = ({
+  user,
+  onClick,
+  onFollow,
+  onUnfollow,
+}) => {
   const followersCount = user.follower_count ?? user.followers_count ?? 0;
   const postsCount = user.post_count ?? user.posts_count ?? 0;
 
@@ -32,8 +39,14 @@ export const UserResult: React.FC<UserResultProps> = ({ user, onClick }) => {
         </div>
       </div>
 
-      <div className={styles.action}>
-        <FollowButton userId={user.id} initialFollowing={user.is_following} size="small" />
+      <div className={styles.action} onClick={(event) => event.stopPropagation()}>
+        <FollowButton
+          userId={user.id}
+          initialFollowing={user.is_following}
+          onFollow={onFollow}
+          onUnfollow={onUnfollow}
+          size="small"
+        />
       </div>
     </div>
   );

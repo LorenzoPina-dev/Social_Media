@@ -60,16 +60,6 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           <div className={styles.bio}>
             <h3 className={styles.displayName}>{profile.display_name}</h3>
             {profile.bio && <p className={styles.bioText}>{profile.bio}</p>}
-            {profile.website_url && (
-              <a
-                href={profile.website_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.website}
-              >
-                {profile.website_url}
-              </a>
-            )}
           </div>
 
           <div className={styles.actions}>

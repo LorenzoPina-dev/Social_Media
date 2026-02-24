@@ -24,6 +24,8 @@ export interface UpdateProfileRequest {
   display_name?: string;
   bio?: string;
   avatar_url?: string;
+  website_url?: string;
+  location?: string;
 }
 
 export interface Follower {
