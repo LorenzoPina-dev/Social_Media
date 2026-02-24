@@ -8,7 +8,7 @@ import { CursorParams, PaginatedResponse } from '@/types/api.types';
 
 // Notifications
 export const getNotifications = async (params?: CursorParams) => {
-  return apiClient.get<PaginatedResponse<Notification>>('/api/v1/notifications', {
+  return apiClient.get<PaginatedResponse<Notification>>('/api/v1/notifications/', {
     params,
   });
 };

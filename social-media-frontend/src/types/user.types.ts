@@ -75,15 +75,20 @@ export interface DataDeletionStatus {
   can_cancel: boolean;
 }
 
-export interface PrivacySettings {
-  profile_visibility: 'PUBLIC' | 'PRIVATE';
-  show_activity_status: boolean;
-  allow_tagging: boolean;
-  allow_messages_from: 'EVERYONE' | 'FOLLOWING' | 'NOBODY';
-  show_followers: boolean;
-  show_following: boolean;
-}
 
 export interface UsersBatchRequest {
   ids: string[];
+}
+
+// Add to your existing types
+export interface PrivacySettings {
+  is_private: boolean;
+  show_activity_status: boolean;
+  allow_tagging: boolean;
+  allow_mentions: boolean;
+  allow_direct_messages: 'everyone' | 'followers' | 'none';
+  blocked_users: string[];
+  muted_users: string[];
+  hide_likes_and_views: boolean;
+  comment_filter: 'everyone' | 'followers' | 'none';
 }

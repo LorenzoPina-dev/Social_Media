@@ -4,14 +4,22 @@
  */
 
 import { UserModel } from '../models/user.model';
+import { PrivacyModel } from '../models/privacy.model';
 import { CacheService } from './cache.service';
 import { UserProducer } from '../kafka/producers/user.producer';
 import { logger } from '../utils/logger';
-import { User, CreateUserDto, UpdateUserDto } from '../types';
+import {
+  User,
+  CreateUserDto,
+  UpdateUserDto,
+  PrivacySettings,
+  UpdatePrivacySettingsDto,
+} from '../types';
 
 export class UserService {
   constructor(
     private userModel: UserModel,
+    private privacyModel: PrivacyModel,
     private cacheService: CacheService,
     private userProducer: UserProducer
   ) {}
@@ -247,6 +255,49 @@ export class UserService {
       return cachedUsers;
     } catch (error) {
       logger.error('Failed to find users by IDs', { error, ids });
+      throw error;
+    }
+  }
+
+  /**
+   * Get suggested users
+   */
+  async getSuggestedUsers(limit: number = 10, excludeUserId?: string): Promise<User[]> {
+    try {
+      return await this.userModel.getSuggested(limit, excludeUserId);
+    } catch (error) {
+      logger.error('Failed to get suggested users', { error, limit, excludeUserId });
+      throw error;
+    }
+  }
+
+  /**
+   * Get privacy settings
+   */
+  async getPrivacySettings(userId: string): Promise<PrivacySettings> {
+    try {
+      const existing = await this.privacyModel.findByUserId(userId);
+      if (existing) {
+        return existing;
+      }
+      return this.privacyModel.createDefault(userId);
+    } catch (error) {
+      logger.error('Failed to get privacy settings', { error, userId });
+      throw error;
+    }
+  }
+
+  /**
+   * Update privacy settings
+   */
+  async updatePrivacySettings(
+    userId: string,
+    data: UpdatePrivacySettingsDto
+  ): Promise<PrivacySettings> {
+    try {
+      return await this.privacyModel.upsert(userId, data);
+    } catch (error) {
+      logger.error('Failed to update privacy settings', { error, userId });
       throw error;
     }
   }

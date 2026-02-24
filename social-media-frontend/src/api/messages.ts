@@ -1,9 +1,29 @@
 import { apiClient } from './client';
+import { AxiosError } from 'axios';
 import { Conversation, Message } from '@/types/message.types';
-import { CursorParams, PaginatedResponse } from '@/types/api.types';
+import { CursorParams } from '@/types/api.types';
+
+const isMessagesUnavailable = (error: unknown): boolean => {
+  const axiosError = error as AxiosError;
+  const status = axiosError.response?.status;
+  return axiosError.code === 'ERR_NETWORK' || status === 404 || status === 501;
+};
 
 export const getConversations = async () => {
-  return apiClient.get<Conversation[]>('/api/v1/messages/conversations');
+  try {
+    return await apiClient.get<Conversation[]>('/api/v1/messages/conversations');
+  } catch (error) {
+    if (isMessagesUnavailable(error)) {
+      return {
+        data: [],
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as any,
+      };
+    }
+    throw error;
+  }
 };
 
 export const getConversationDetails = async (conversationId: string) => {
@@ -13,7 +33,20 @@ export const getConversationDetails = async (conversationId: string) => {
 };
 
 export const getMessages = async (conversationId: string, params?: CursorParams) => {
-  return apiClient.get<Message[]>(`/api/v1/messages/${conversationId}`, { params });
+  try {
+    return await apiClient.get<Message[]>(`/api/v1/messages/${conversationId}`, { params });
+  } catch (error) {
+    if (isMessagesUnavailable(error)) {
+      return {
+        data: [],
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: {} as any,
+      };
+    }
+    throw error;
+  }
 };
 
 export const sendMessage = async (conversationId: string, content: string) => {

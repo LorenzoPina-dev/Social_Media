@@ -1,0 +1,25 @@
+.searchPage {
+  display: grid;
+  gap: 12px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.title {
+  margin: 0;
+}
+
+.recentSearches {
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.recentTitle {
+  margin: 0;
+}

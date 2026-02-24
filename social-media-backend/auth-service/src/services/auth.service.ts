@@ -5,6 +5,7 @@
 
 import { UserModel } from '../models/user.model';
 import { SessionModel } from '../models/session.model';
+import { PasswordResetModel } from '../models/passwordReset.model';
 import { JWTService } from './jwt.service';
 import { SessionService } from './session.service';
 import { MFAService } from './mfa.service';
@@ -15,6 +16,8 @@ import {
   User,
   CreateUserDto,
   LoginDto,
+  RequestPasswordResetDto,
+  ResetPasswordDto,
   TokenPair,
   UnauthorizedError,
   ConflictError,
@@ -27,6 +30,7 @@ export class AuthService {
   constructor(
     private userModel: UserModel,
     private sessionModel: SessionModel,
+    private passwordResetModel: PasswordResetModel,
     private jwtService: JWTService,
     private sessionService: SessionService,
     private authProducer: AuthProducer
@@ -261,6 +265,61 @@ export class AuthService {
       metrics.incrementCounter('auth_logout_all_success');
     } catch (error) {
       logger.error('Logout all failed', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Request password reset
+   */
+  async requestPasswordReset(data: RequestPasswordResetDto): Promise<void> {
+    try {
+      const user = await this.userModel.findByEmail(data.email);
+
+      // Do not reveal if email exists
+      if (!user) {
+        logger.info('Password reset requested for non-existing email', { email: data.email });
+        return;
+      }
+
+      await this.passwordResetModel.deleteAllForUser(user.id);
+      const resetToken = await this.passwordResetModel.create(user.id, 60);
+
+      // Placeholder for real email integration.
+      logger.info('Password reset token generated', {
+        userId: user.id,
+        token: resetToken.token,
+      });
+    } catch (error) {
+      logger.error('Request password reset failed', { error, email: data.email });
+      throw error;
+    }
+  }
+
+  /**
+   * Reset password using token
+   */
+  async resetPassword(data: ResetPasswordDto): Promise<void> {
+    try {
+      const resetToken = await this.passwordResetModel.findByToken(data.token);
+      if (!resetToken) {
+        throw new ValidationError('Invalid or expired reset token');
+      }
+
+      this.validatePassword(data.new_password);
+
+      await this.userModel.updatePassword(resetToken.user_id, data.new_password);
+      await this.passwordResetModel.markAsUsed(resetToken.id);
+      await this.passwordResetModel.deleteAllForUser(resetToken.user_id);
+      await this.sessionModel.deleteAllForUser(resetToken.user_id);
+
+      await this.authProducer.publishPasswordChanged({
+        type: 'password_changed',
+        userId: resetToken.user_id,
+        timestamp: new Date(),
+      });
+    } catch (error) {
+      logger.error('Reset password failed', { error });
       throw error;
     }
   }

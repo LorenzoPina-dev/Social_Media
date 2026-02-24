@@ -32,8 +32,9 @@ export const useComments = (postId: string) => {
         limit: 20,
       });
       
-      const newComments = response.data.data;
-      const newCursor = response.data.cursor;
+      const payload = response.data?.data ?? response.data;
+      const newComments = Array.isArray(payload) ? payload : [];
+      const newCursor = response.data?.pagination?.cursor ?? response.data?.cursor ?? null;
       
       setComments(prev => reset ? newComments : [...prev, ...newComments]);
       setCursor(newCursor || null);
@@ -56,7 +57,7 @@ export const useComments = (postId: string) => {
     try {
       const response = await createComment(postId, { content, parent_id: parentId });
       
-      const newComment = response.data;
+      const newComment = response.data?.data ?? response.data;
       
       if (parentId) {
         // Aggiungi come risposta al commento padre
@@ -150,11 +151,12 @@ export const useComments = (postId: string) => {
   const loadReplies = useCallback(async (commentId: string) => {
     try {
       const response = await getCommentThread(commentId);
+      const replies = response.data?.data ?? response.data;
       
       setComments(prev =>
         prev.map(comment =>
           comment.id === commentId
-            ? { ...comment, replies: response.data }
+            ? { ...comment, replies: Array.isArray(replies) ? replies : [] }
             : comment
         )
       );

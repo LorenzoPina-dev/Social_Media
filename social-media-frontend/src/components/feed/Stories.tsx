@@ -12,7 +12,8 @@ export const Stories: React.FC = () => {
     const loadStories = async () => {
       try {
         const response = await getSuggestedUsers({ limit: 10 });
-        setStories(response.data.data);
+        const users = response.data?.data ?? response.data?.items ?? response.data ?? [];
+        setStories(Array.isArray(users) ? users : []);
       } catch (error) {
         console.error('Failed to load stories:', error);
       } finally {

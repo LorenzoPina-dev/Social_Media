@@ -3,11 +3,11 @@ import { FeedPost, FeedResponse, TrendingFeedResponse } from '@/types/feed.types
 import { CursorParams } from '@/types/api.types';
 
 export const getFeed = async (params?: CursorParams) => {
-  return apiClient.get<FeedResponse>('/api/v1/feed', { params });
+  return apiClient.get<FeedResponse>('/api/v1/feed/', { params });
 };
 
 export const getUserFeed = async (userId: string, params?: CursorParams) => {
-  return apiClient.get<FeedResponse>(`/api/v1/feed/user/${userId}`, { params });
+  return apiClient.get<FeedResponse>(`/api/v1/users/${userId}/posts`, { params });
 };
 
 export const getFeedSize = async () => {
@@ -19,11 +19,11 @@ export const clearFeed = async () => {
 };
 
 export const getTrendingFeed = async (period: 'day' | 'week' | 'month' = 'day') => {
-  return apiClient.get<TrendingFeedResponse>('/api/v1/feed/trending', {
-    params: { period },
+  return apiClient.get<TrendingFeedResponse>('/api/v1/feed/', {
+    params: { period, limit: 24 },
   });
 };
 
 export const getHashtagFeed = async (tag: string, params?: CursorParams) => {
-  return apiClient.get<FeedResponse>(`/api/v1/feed/hashtag/${tag}`, { params });
+  return apiClient.get<FeedResponse>(`/api/v1/search/hashtag/${tag}`, { params });
 };

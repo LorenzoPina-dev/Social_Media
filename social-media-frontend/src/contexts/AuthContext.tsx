@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@/types/auth.types';
-import { getCurrentUser, login as apiLogin, logout as apiLogout } from '@/api/auth';
+import { login as apiLogin, logout as apiLogout } from '@/api/auth';
 import toast from 'react-hot-toast';
+import { getCurrentUser } from '@/api/users';
 
 interface AuthContextType {
   user: User | null;
@@ -31,7 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshUser = async () => {
     try {
       const response = await getCurrentUser();
-      setUser(response.data);
+      setUser(response.data.data);
     } catch (error) {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
@@ -41,14 +42,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (username: string, password: string, mfaCode?: string) => {
     try {
-      const response = await apiLogin({ username, password, mfaCode });
+      const response = await apiLogin({ username, password , ...(mfaCode?.trim() ? { mfa_code: mfaCode.trim() } : {}) });
       
-      if (response.data.mfa_required) {
+      if (response.data.data.mfa_required) {
         throw new Error('MFA_REQUIRED');
       }
 
-      localStorage.setItem('accessToken', response.data.access_token);
-      localStorage.setItem('refreshToken', response.data.refresh_token);
+      localStorage.setItem('accessToken', response.data.data.tokens.access_token);
+      localStorage.setItem('refreshToken', response.data.data.tokens.refresh_token);
 
       await refreshUser();
       toast.success('Login effettuato con successo!');

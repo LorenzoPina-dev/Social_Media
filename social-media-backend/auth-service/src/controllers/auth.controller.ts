@@ -7,7 +7,12 @@ import { Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
 import { logger } from '../utils/logger';
 import { metrics } from '../utils/metrics';
-import { CreateUserDto, LoginDto } from '../types';
+import {
+  CreateUserDto,
+  LoginDto,
+  RequestPasswordResetDto,
+  ResetPasswordDto,
+} from '../types';
 
 export class AuthController {
   constructor(private authService: AuthService) {}
@@ -163,6 +168,44 @@ export class AuthController {
       });
     } catch (error) {
       logger.error('Logout all failed', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Request password reset
+   * POST /api/v1/auth/forgot-password
+   */
+  async forgotPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const data: RequestPasswordResetDto = req.body;
+      await this.authService.requestPasswordReset(data);
+
+      res.json({
+        success: true,
+        message: 'If this email exists, password reset instructions have been sent',
+      });
+    } catch (error) {
+      logger.error('Forgot password failed', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Reset password
+   * POST /api/v1/auth/reset-password
+   */
+  async resetPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const data: ResetPasswordDto = req.body;
+      await this.authService.resetPassword(data);
+
+      res.json({
+        success: true,
+        message: 'Password reset successfully',
+      });
+    } catch (error) {
+      logger.error('Reset password failed', { error });
       throw error;
     }
   }

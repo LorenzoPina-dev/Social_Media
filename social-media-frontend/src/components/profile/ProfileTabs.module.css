@@ -1,0 +1,55 @@
+.tabs {
+  margin-top: 16px;
+}
+
+.tabHeader {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+  padding-bottom: 8px;
+}
+
+.tabButton {
+  border: none;
+  background: transparent;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.active {
+  background: #eef2ff;
+  color: #1d4ed8;
+}
+
+.tabIcon {
+  line-height: 1;
+}
+
+.tabLabel {
+  font-weight: 600;
+}
+
+.tabContent {
+  padding-top: 14px;
+}
+
+.comingSoon {
+  text-align: center;
+  padding: 32px 12px;
+}
+
+.comingSoonIcon {
+  font-size: 22px;
+}
+
+.comingSoonTitle {
+  margin: 10px 0 6px;
+}
+
+.comingSoonText {
+  color: var(--color-text-muted, #6b7280);
+}

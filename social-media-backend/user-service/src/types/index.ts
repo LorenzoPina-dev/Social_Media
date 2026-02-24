@@ -34,6 +34,33 @@ export interface UpdateUserDto {
   avatar_url?: string;
 }
 
+export interface PrivacySettings {
+  user_id: string;
+  is_private: boolean;
+  show_activity_status: boolean;
+  allow_tagging: boolean;
+  allow_mentions: boolean;
+  allow_direct_messages: 'everyone' | 'followers' | 'none';
+  blocked_users: string[];
+  muted_users: string[];
+  hide_likes_and_views: boolean;
+  comment_filter: 'everyone' | 'followers' | 'none';
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface UpdatePrivacySettingsDto {
+  is_private?: boolean;
+  show_activity_status?: boolean;
+  allow_tagging?: boolean;
+  allow_mentions?: boolean;
+  allow_direct_messages?: 'everyone' | 'followers' | 'none';
+  blocked_users?: string[];
+  muted_users?: string[];
+  hide_likes_and_views?: boolean;
+  comment_filter?: 'everyone' | 'followers' | 'none';
+}
+
 export interface Follower {
   id: string;
   follower_id: string;

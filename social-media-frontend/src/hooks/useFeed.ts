@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { getFeed } from '@/api/feed';
 import { FeedPost } from '@/types/feed.types';
 import { useInfiniteScroll } from './useInfiniteScroll';
@@ -26,12 +26,20 @@ export const useFeed = (initialParams?: any) => {
         ...initialParams,
       });
 
-      const newPosts = response.data.data;
-      const newCursor = response.data.cursor;
+      const payload = response.data?.data ?? response.data;
+      const newPosts = Array.isArray(payload?.items)
+        ? payload.items
+        : Array.isArray(payload?.data)
+        ? payload.data
+        : Array.isArray(payload)
+        ? payload
+        : [];
+      const newCursor = payload?.nextCursor ?? payload?.cursor ?? null;
+      const newHasMore = typeof payload?.hasMore === 'boolean' ? payload.hasMore : !!newCursor;
 
       setPosts(prev => reset ? newPosts : [...prev, ...newPosts]);
-      setCursor(newCursor || null);
-      setHasMore(!!newCursor);
+      setCursor(newCursor);
+      setHasMore(newHasMore);
     } catch (err) {
       setError(err as Error);
     } finally {

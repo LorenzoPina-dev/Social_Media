@@ -1,0 +1,57 @@
+.settings {
+  display: grid;
+  gap: 12px;
+}
+
+.title {
+  margin: 0;
+}
+
+.loading {
+  color: var(--color-text-muted, #6b7280);
+}
+
+.section {
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.sectionTitle {
+  margin: 0 0 8px;
+}
+
+.option {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.optionInfo {
+  display: grid;
+  gap: 2px;
+}
+
+.optionLabel {
+  font-weight: 600;
+}
+
+.optionDescription {
+  color: var(--color-text-muted, #6b7280);
+  font-size: 13px;
+}
+
+.radioGroup {
+  display: grid;
+  gap: 8px;
+}
+
+.radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.saveButton {
+  justify-self: start;
+}

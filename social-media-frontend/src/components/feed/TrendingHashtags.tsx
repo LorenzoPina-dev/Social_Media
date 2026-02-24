@@ -15,7 +15,15 @@ export const TrendingHashtags = () => {
   const loadTrendingHashtags = async () => {
     try {
       const response = await getTrendingHashtags();
-      setHashtags(response.data);
+      const payload = response.data as any;
+      const normalized = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data)
+        ? payload.data
+        : Array.isArray(payload?.items)
+        ? payload.items
+        : [];
+      setHashtags(normalized);
     } catch (error) {
       console.error('Failed to load trending hashtags:', error);
     } finally {
@@ -49,11 +57,11 @@ export const TrendingHashtags = () => {
         >
           <span className={styles.tag}>#{hashtag.tag}</span>
           <span className={styles.count}>
-            {hashtag.post_count.toLocaleString('it-IT')} post
+            {(hashtag.posts_count_24h ?? (hashtag as any).post_count ?? 0).toLocaleString('it-IT')} post
           </span>
-          {hashtag.trend > 0 && (
+          {(hashtag.trend_velocity ?? (hashtag as any).trend ?? 0) > 0 && (
             <span className={styles.trend}>
-              +{hashtag.trend}%
+              +{(hashtag.trend_velocity ?? (hashtag as any).trend ?? 0)}%
             </span>
           )}
         </Link>

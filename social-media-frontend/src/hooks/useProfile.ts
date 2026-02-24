@@ -26,7 +26,7 @@ export const useProfile = (username?: string) => {
     
     try {
       const response = await getUserProfile(username);
-      setProfile(response.data);
+      setProfile(response.data.data ?? response.data);
     } catch (err) {
       setError(err as Error);
       if (err instanceof Error && err.message.includes('404')) {
@@ -48,7 +48,7 @@ export const useProfile = (username?: string) => {
         limit: 12,
       });
       
-      const newPosts = response.data.data;
+      const newPosts = response.data.data ?? [];
       const newCursor = response.data.cursor;
       
       setPosts(prev => reset ? newPosts : [...prev, ...newPosts]);
@@ -78,12 +78,13 @@ export const useProfile = (username?: string) => {
     
     try {
       const response = await updateProfile(data);
-      setProfile(response.data);
+      const nextProfile = response.data.data ?? response.data;
+      setProfile(nextProfile);
       if (user) {
-        updateUser({ display_name: response.data.display_name, avatar_url: response.data.avatar_url });
+        updateUser({ display_name: nextProfile.display_name, avatar_url: nextProfile.avatar_url });
       }
       toast.success('Profilo aggiornato!');
-      return response.data;
+      return nextProfile;
     } catch (err) {
       toast.error('Errore durante l\'aggiornamento');
       throw err;
@@ -95,10 +96,11 @@ export const useProfile = (username?: string) => {
     
     try {
       await followUser(profile.id);
+      const followersCount = (profile as any).followers_count ?? (profile as any).follower_count ?? 0;
       setProfile({
         ...profile,
         is_following: true,
-        follower_count: profile.follower_count + 1,
+        followers_count: followersCount + 1,
       });
       toast.success(`Ora segui ${profile.username}`);
     } catch (err) {
@@ -112,10 +114,11 @@ export const useProfile = (username?: string) => {
     
     try {
       await unfollowUser(profile.id);
+      const followersCount = (profile as any).followers_count ?? (profile as any).follower_count ?? 0;
       setProfile({
         ...profile,
         is_following: false,
-        follower_count: Math.max(0, profile.follower_count - 1),
+        followers_count: Math.max(0, followersCount - 1),
       });
       toast.success(`Non segui più ${profile.username}`);
     } catch (err) {

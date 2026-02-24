@@ -46,7 +46,9 @@ const ExplorePage = () => {
     setIsLoadingTrending(true);
     try {
       const response = await getTrendingFeed('day');
-      setTrendingPosts(response.data.data);
+      const payload = response.data?.data ?? response.data;
+      const items = payload?.items ?? payload?.data ?? [];
+      setTrendingPosts(Array.isArray(items) ? items : []);
     } catch (error) {
       console.error('Failed to load trending feed:', error);
     } finally {
@@ -58,13 +60,13 @@ const ExplorePage = () => {
     setIsSearching(true);
     try {
       const [usersRes, postsRes, hashtagsRes] = await Promise.all([
-        searchUsers(query, { limit: 10 }),
-        searchPosts(query, { limit: 10 }),
+        searchUsers({ q: query, limit: 10 }),
+        searchPosts({ q: query, limit: 10 }),
         searchHashtags(query),
       ]);
-      setUsers(usersRes.data.data);
-      setPosts(postsRes.data.data);
-      setHashtags(hashtagsRes.data);
+      setUsers(usersRes.data?.data ?? usersRes.data?.items ?? usersRes.data ?? []);
+      setPosts(postsRes.data?.data ?? postsRes.data?.items ?? postsRes.data ?? []);
+      setHashtags(hashtagsRes.data?.data ?? hashtagsRes.data?.items ?? hashtagsRes.data ?? []);
     } catch (error) {
       console.error('Search failed:', error);
     } finally {

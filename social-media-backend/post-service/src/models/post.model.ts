@@ -93,6 +93,21 @@ export class PostModel {
     return posts.map((p: Record<string, unknown>) => this.normalize(p));
   }
 
+  /** Trova post per lista di ID */
+  async findByIds(ids: string[]): Promise<Post[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    const db = getDatabase();
+    const posts = await db(this.table)
+      .whereIn('id', ids)
+      .whereNull('deleted_at')
+      .where('is_scheduled', false);
+
+    return posts.map((p: Record<string, unknown>) => this.normalize(p));
+  }
+
   /** Aggiorna un post */
   async update(id: string, dto: UpdatePostDto): Promise<Post> {
     const db = getDatabase();

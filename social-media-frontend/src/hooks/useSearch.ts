@@ -32,14 +32,14 @@ export const useSearch = (): UseSearchReturn => {
 
     try {
       const [usersRes, postsRes, hashtagsRes] = await Promise.all([
-        searchUsers(query, { limit: 10 }),
-        searchPosts(query, { limit: 10 }),
+        searchUsers({ q: query, limit: 10 }),
+        searchPosts({ q: query, limit: 10 }),
         searchHashtags(query),
       ]);
 
-      setUsers(usersRes.data.data);
-      setPosts(postsRes.data.data);
-      setHashtags(hashtagsRes.data);
+      setUsers(usersRes.data?.data ?? usersRes.data?.items ?? usersRes.data ?? []);
+      setPosts(postsRes.data?.data ?? postsRes.data?.items ?? postsRes.data ?? []);
+      setHashtags(hashtagsRes.data?.data ?? hashtagsRes.data?.items ?? hashtagsRes.data ?? []);
     } catch (err) {
       setError(err as Error);
     } finally {

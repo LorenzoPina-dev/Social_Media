@@ -1,0 +1,56 @@
+.settingsPage {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 14px;
+}
+
+.sidebar {
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 12px;
+  padding: 12px;
+  align-self: start;
+}
+
+.sidebarTitle {
+  margin: 0 0 10px;
+}
+
+.nav {
+  display: grid;
+  gap: 8px;
+}
+
+.navItem {
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.active {
+  background: #eef2ff;
+  color: #1d4ed8;
+}
+
+.navIcon {
+  line-height: 1;
+}
+
+.navLabel {
+  font-weight: 600;
+}
+
+.content {
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .settingsPage {
+    grid-template-columns: 1fr;
+  }
+}

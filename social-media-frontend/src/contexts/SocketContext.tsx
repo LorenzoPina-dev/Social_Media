@@ -27,11 +27,15 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     const token = localStorage.getItem('accessToken');
-    const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3007';
+    const rawSocketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3007';
+    const socketUrl =
+      rawSocketUrl === 'http://localhost:3007' ? 'http://127.0.0.1:3007' : rawSocketUrl;
+    const socketPath = import.meta.env.VITE_SOCKET_PATH || '/notifications';
     
     const newSocket: SocketType = io(socketUrl, {
       auth: { token },
-      transports: ['websocket'],
+      path: socketPath,
+      transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,

@@ -259,4 +259,91 @@ export class UserController {
       });
     }
   }
+
+  /**
+   * Suggested users
+   * GET /api/v1/users/suggested
+   */
+  async getSuggestedUsers(req: Request, res: Response): Promise<void> {
+    const { limit } = req.query;
+    const currentUserId = (req as any).user?.id;
+
+    try {
+      const parsedLimit = limit ? parseInt(limit as string, 10) : 10;
+      const users = await this.userService.getSuggestedUsers(parsedLimit, currentUserId);
+
+      res.json({
+        success: true,
+        data: users,
+      });
+    } catch (error) {
+      logger.error('Failed to get suggested users', { error });
+      res.status(500).json({
+        error: 'Internal server error',
+        message: 'Failed to load suggested users',
+      });
+    }
+  }
+
+  /**
+   * Get privacy settings
+   * GET /api/v1/users/:id/privacy
+   */
+  async getPrivacySettings(req: Request, res: Response): Promise<void> {
+    const { id } = req.params;
+    const currentUserId = (req as any).user?.id;
+
+    try {
+      if (currentUserId !== id) {
+        res.status(403).json({
+          error: 'Forbidden',
+          message: 'You can only read your own privacy settings',
+        });
+        return;
+      }
+
+      const settings = await this.userService.getPrivacySettings(id);
+      res.json({
+        success: true,
+        data: settings,
+      });
+    } catch (error) {
+      logger.error('Failed to get privacy settings', { error, userId: id });
+      res.status(500).json({
+        error: 'Internal server error',
+        message: 'Failed to get privacy settings',
+      });
+    }
+  }
+
+  /**
+   * Update privacy settings
+   * PUT /api/v1/users/:id/privacy
+   */
+  async updatePrivacySettings(req: Request, res: Response): Promise<void> {
+    const { id } = req.params;
+    const currentUserId = (req as any).user?.id;
+
+    try {
+      if (currentUserId !== id) {
+        res.status(403).json({
+          error: 'Forbidden',
+          message: 'You can only update your own privacy settings',
+        });
+        return;
+      }
+
+      const settings = await this.userService.updatePrivacySettings(id, req.body);
+      res.json({
+        success: true,
+        data: settings,
+      });
+    } catch (error) {
+      logger.error('Failed to update privacy settings', { error, userId: id });
+      res.status(500).json({
+        error: 'Internal server error',
+        message: 'Failed to update privacy settings',
+      });
+    }
+  }
 }

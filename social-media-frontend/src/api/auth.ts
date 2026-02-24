@@ -1,3 +1,4 @@
+// auth.ts
 import { apiClient } from './client';
 import {
   LoginRequest,
@@ -13,7 +14,16 @@ import {
 } from '@/types/auth.types';
 
 export const login = async (data: LoginRequest) => {
-  return apiClient.post<LoginResponse>('/api/v1/auth/login', data);
+  const response = await apiClient.post<LoginResponse>('/api/v1/auth/login', data);
+  
+  // Dopo il login, impostiamo l'header Authorization
+  const accessToken = response.data.data.tokens.access_token;
+  if (accessToken) {
+    apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+    console.log('Auth header impostato dopo login:', apiClient.defaults.headers.common['Authorization']);
+  }
+  
+  return response;
 };
 
 export const register = async (data: RegisterRequest) => {
@@ -22,10 +32,13 @@ export const register = async (data: RegisterRequest) => {
 
 export const logout = async () => {
   const refreshToken = localStorage.getItem('refreshToken');
+  // Rimuovi l'header Authorization prima di fare logout
+  delete apiClient.defaults.headers.common['Authorization'];
   return apiClient.post('/api/v1/auth/logout', { refresh_token: refreshToken });
 };
 
 export const logoutAll = async () => {
+  delete apiClient.defaults.headers.common['Authorization'];
   return apiClient.post('/api/v1/auth/logout-all');
 };
 
@@ -63,8 +76,4 @@ export const forgotPassword = async (data: ForgotPasswordRequest) => {
 
 export const resetPassword = async (data: ResetPasswordRequest) => {
   return apiClient.post('/api/v1/auth/reset-password', data);
-};
-
-export const getCurrentUser = async () => {
-  return apiClient.get('/api/v1/auth/me');
 };

@@ -4,6 +4,7 @@
 
 import { PostModel } from '../models/post.model';
 import { EditHistoryModel } from '../models/editHistory.model';
+import { SavedPostModel } from '../models/savedPost.model';
 import { HashtagService } from './hashtag.service';
 import { CacheService } from './cache.service';
 import { PostProducer } from '../kafka/producers/post.producer';
@@ -50,6 +51,7 @@ export class PostService {
   constructor(
     private postModel: PostModel,
     private editHistoryModel: EditHistoryModel,
+    private savedPostModel: SavedPostModel,
     private hashtagService: HashtagService,
     private cacheService: CacheService,
     private postProducer: PostProducer,
@@ -252,5 +254,80 @@ export class PostService {
       throw new PostForbiddenError();
     }
     return this.editHistoryModel.findByPostId(postId);
+  }
+
+  /**
+   * Save post for current user
+   */
+  async savePost(postId: string, userId: string): Promise<void> {
+    const post = await this.postModel.findById(postId);
+    if (!post) {
+      throw new PostNotFoundError(postId);
+    }
+    this.checkVisibility(post, userId);
+    await this.savedPostModel.save(userId, postId);
+  }
+
+  /**
+   * Remove saved post for current user
+   */
+  async unsavePost(postId: string, userId: string): Promise<void> {
+    await this.savedPostModel.unsave(userId, postId);
+  }
+
+  /**
+   * List saved posts for current user
+   */
+  async listSavedPosts(
+    userId: string,
+    query: ListPostsQuery
+  ): Promise<PaginatedPostsResponse> {
+    const limit = Math.min(query.limit || config.PAGINATION.DEFAULT_PAGE_SIZE, config.PAGINATION.MAX_PAGE_SIZE);
+
+    let cursor: { created_at: string; post_id: string } | undefined;
+    if (query.cursor) {
+      try {
+        cursor = JSON.parse(Buffer.from(query.cursor, 'base64').toString('utf8')) as {
+          created_at: string;
+          post_id: string;
+        };
+      } catch {
+        throw new ValidationError('Invalid cursor');
+      }
+    }
+
+    const savedRecords = await this.savedPostModel.listByUser(userId, {
+      cursor,
+      limit: limit + 1,
+    });
+
+    const hasMore = savedRecords.length > limit;
+    const pageRecords = hasMore ? savedRecords.slice(0, limit) : savedRecords;
+
+    const postIds = pageRecords.map((record) => record.post_id);
+    const posts = await this.postModel.findByIds(postIds);
+    const postMap = new Map(posts.map((post) => [post.id, post]));
+    const orderedPosts = postIds
+      .map((id) => postMap.get(id))
+      .filter((post): post is Post => !!post);
+
+    let nextCursor: string | undefined;
+    if (hasMore && pageRecords.length > 0) {
+      const last = pageRecords[pageRecords.length - 1];
+      nextCursor = Buffer.from(
+        JSON.stringify({ created_at: last.created_at, post_id: last.post_id })
+      ).toString('base64');
+    }
+
+    return {
+      success: true,
+      data: orderedPosts,
+      cursor: nextCursor,
+      hasMore,
+      pagination: {
+        hasMore,
+        cursor: nextCursor,
+      },
+    };
   }
 }

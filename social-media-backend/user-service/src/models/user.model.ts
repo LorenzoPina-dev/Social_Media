@@ -154,6 +154,27 @@ export class UserModel {
   }
 
   /**
+   * Get suggested users ordered by follower count
+   */
+  async getSuggested(
+    limit: number = 10,
+    excludeUserId?: string
+  ): Promise<User[]> {
+    const db = getDatabase();
+    let query = db(this.table)
+      .whereNull('deleted_at')
+      .where('status', 'ACTIVE')
+      .orderBy('follower_count', 'desc')
+      .limit(limit);
+
+    if (excludeUserId) {
+      query = query.whereNot('id', excludeUserId);
+    }
+
+    return query;
+  }
+
+  /**
    * Increment follower count
    */
   async incrementFollowerCount(id: string): Promise<void> {

@@ -18,7 +18,8 @@ export const Suggestions: React.FC = () => {
   const loadSuggestions = async () => {
     try {
       const response = await getSuggestedUsers({ limit: 5 });
-      setSuggestions(response.data.data);
+      const users = response.data?.data ?? response.data?.items ?? response.data ?? [];
+      setSuggestions(Array.isArray(users) ? users : []);
     } catch (error) {
       console.error('Failed to load suggestions:', error);
     } finally {

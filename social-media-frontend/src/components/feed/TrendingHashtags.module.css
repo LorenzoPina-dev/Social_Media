@@ -1,0 +1,68 @@
+.trending {
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.title {
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text, #111827);
+}
+
+.hashtag {
+  display: block;
+  text-decoration: none;
+  padding: 10px 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.hashtag:hover {
+  background: var(--color-hover, #f3f4f6);
+}
+
+.tag {
+  display: block;
+  font-weight: 600;
+  color: var(--color-text, #111827);
+}
+
+.count {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.875rem;
+  color: var(--color-text-muted, #6b7280);
+}
+
+.trend {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #16a34a;
+}
+
+.skeleton {
+  height: 16px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 37%, #f3f4f6 63%);
+  background-size: 400% 100%;
+  animation: trending-skeleton 1.2s ease-in-out infinite;
+  margin-bottom: 10px;
+}
+
+.skeleton:last-child {
+  margin-bottom: 0;
+}
+
+@keyframes trending-skeleton {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}

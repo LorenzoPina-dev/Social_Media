@@ -8,12 +8,16 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: process.env.VITE_API_GATEWAY_URL || 'http://localhost',
+        target: process.env.VITE_API_GATEWAY_URL || 'http://127.0.0.1',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
       },
       '/socket.io': {
-        target: process.env.VITE_SOCKET_URL || 'http://localhost:3007',
+        target: process.env.VITE_SOCKET_URL || 'http://127.0.0.1:3007',
+        changeOrigin: true,
+        ws: true,
+      },
+      '/notifications': {
+        target: process.env.VITE_SOCKET_URL || 'http://127.0.0.1:3007',
         changeOrigin: true,
         ws: true,
       },

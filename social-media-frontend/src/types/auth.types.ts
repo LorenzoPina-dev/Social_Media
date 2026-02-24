@@ -4,12 +4,21 @@ export interface LoginRequest {
   mfa_code?: string;
 }
 
-export interface LoginResponse {
+export interface TokenPair {
   access_token: string;
   refresh_token: string;
   expires_in: number;
-  token_type: string;
+}
+
+export interface LoginResponseData {
+  user: User;
+  tokens: TokenPair;
   mfa_required?: boolean;
+}
+
+export interface LoginResponse {
+  success: boolean;
+  data: LoginResponseData;
 }
 
 export interface RegisterRequest {
@@ -32,9 +41,8 @@ export interface RefreshTokenRequest {
 }
 
 export interface RefreshTokenResponse {
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
+  success: boolean;
+  data: TokenPair;
 }
 
 export interface MFASetupResponse {

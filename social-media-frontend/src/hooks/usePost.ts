@@ -17,7 +17,7 @@ export const usePost = (postId?: string) => {
     
     try {
       const response = await getPost(postId);
-      setPost(response.data);
+      setPost(response.data?.data ?? response.data);
     } catch (err) {
       setError(err as Error);
     } finally {
@@ -31,9 +31,10 @@ export const usePost = (postId?: string) => {
     
     try {
       const response = await createPost(data);
-      setPost(response.data);
+      const createdPost = response.data?.data ?? response.data;
+      setPost(createdPost);
       toast.success('Post creato con successo!');
-      return response.data;
+      return createdPost;
     } catch (err) {
       setError(err as Error);
       toast.error('Errore durante la creazione del post');
@@ -49,9 +50,10 @@ export const usePost = (postId?: string) => {
     
     try {
       const response = await updatePost(id, data);
-      setPost(response.data);
+      const updatedPost = response.data?.data ?? response.data;
+      setPost(updatedPost);
       toast.success('Post aggiornato!');
-      return response.data;
+      return updatedPost;
     } catch (err) {
       setError(err as Error);
       toast.error('Errore durante l\'aggiornamento');

@@ -13,6 +13,7 @@ import { connectRedis } from './config/redis';
 import { connectKafka, initConsumers } from './config/kafka';
 import { UserService } from './services/user.service';
 import { UserModel } from './models/user.model';
+import { PrivacyModel } from './models/privacy.model';
 import { CacheService } from './services/cache.service';
 import { UserProducer } from './kafka/producers/user.producer';
 
@@ -112,6 +113,7 @@ import { UserProducer } from './kafka/producers/user.producer';
     // deve essere disponibile (DB e Redis già connessi a questo punto)
     const userService = new UserService(
       new UserModel(),
+      new PrivacyModel(),
       new CacheService(),
       new UserProducer(),
     );

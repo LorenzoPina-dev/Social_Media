@@ -55,6 +55,7 @@ const loginSchema = Joi.object({
     }),
   mfa_code: Joi.string()
     .length(6)
+    .empty('')
     .optional()
     .messages({
       'string.length': 'MFA code must be 6 digits',
@@ -66,6 +67,31 @@ const refreshTokenSchema = Joi.object({
     .required()
     .messages({
       'any.required': 'Refresh token is required',
+    }),
+});
+
+const forgotPasswordSchema = Joi.object({
+  email: Joi.string()
+    .email()
+    .required()
+    .messages({
+      'string.email': 'Invalid email format',
+      'any.required': 'Email is required',
+    }),
+});
+
+const resetPasswordSchema = Joi.object({
+  token: Joi.string()
+    .required()
+    .messages({
+      'any.required': 'Reset token is required',
+    }),
+  new_password: Joi.string()
+    .min(8)
+    .required()
+    .messages({
+      'string.min': 'Password must be at least 8 characters long',
+      'any.required': 'New password is required',
     }),
 });
 
@@ -86,7 +112,7 @@ export function setupAuthRoutes(authController: AuthController): Router {
   // Login
   router.post(
     '/login',
-    rateLimiter({ maxRequests: 5, windowMs: 900000 }), // 5 requests per 15 minutes
+    rateLimiter({ maxRequests: 20, windowMs: 900000 }), // 5 requests per 15 minutes
     validateBody(loginSchema),
     authController.login.bind(authController)
   );
@@ -111,6 +137,22 @@ export function setupAuthRoutes(authController: AuthController): Router {
     '/logout-all',
     requireAuth,
     authController.logoutAll.bind(authController)
+  );
+
+  // Forgot password
+  router.post(
+    '/forgot-password',
+    rateLimiter({ maxRequests: 20, windowMs: 900000 }),
+    validateBody(forgotPasswordSchema),
+    authController.forgotPassword.bind(authController)
+  );
+
+  // Reset password
+  router.post(
+    '/reset-password',
+    rateLimiter({ maxRequests: 20, windowMs: 900000 }),
+    validateBody(resetPasswordSchema),
+    authController.resetPassword.bind(authController)
   );
 
   return router;

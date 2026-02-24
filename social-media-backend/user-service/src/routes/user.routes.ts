@@ -65,6 +65,26 @@ const searchQuerySchema = Joi.object({
     .optional(),
 });
 
+const suggestedQuerySchema = Joi.object({
+  limit: Joi.number()
+    .integer()
+    .min(1)
+    .max(50)
+    .optional(),
+});
+
+const privacySettingsSchema = Joi.object({
+  is_private: Joi.boolean().optional(),
+  show_activity_status: Joi.boolean().optional(),
+  allow_tagging: Joi.boolean().optional(),
+  allow_mentions: Joi.boolean().optional(),
+  allow_direct_messages: Joi.string().valid('everyone', 'followers', 'none').optional(),
+  blocked_users: Joi.array().items(Joi.string().uuid()).optional(),
+  muted_users: Joi.array().items(Joi.string().uuid()).optional(),
+  hide_likes_and_views: Joi.boolean().optional(),
+  comment_filter: Joi.string().valid('everyone', 'followers', 'none').optional(),
+}).min(1);
+
 /**
  * Setup user routes
  */
@@ -92,6 +112,29 @@ export function setupUserRoutes(userController: UserController): Router {
     requireAuth,
     validateBody(batchUsersSchema),
     userController.getUsersByIds.bind(userController)
+  );
+
+  // Suggested users
+  router.get(
+    '/suggested',
+    optionalAuth,
+    validateQuery(suggestedQuerySchema),
+    userController.getSuggestedUsers.bind(userController)
+  );
+
+  // Get privacy settings
+  router.get(
+    '/:id/privacy',
+    requireAuth,
+    userController.getPrivacySettings.bind(userController)
+  );
+
+  // Update privacy settings
+  router.put(
+    '/:id/privacy',
+    requireAuth,
+    validateBody(privacySettingsSchema),
+    userController.updatePrivacySettings.bind(userController)
   );
 
   // Get user by id

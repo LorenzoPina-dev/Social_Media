@@ -1,0 +1,15 @@
+.notificationsPage {
+  display: grid;
+  gap: 12px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.title {
+  margin: 0;
+}

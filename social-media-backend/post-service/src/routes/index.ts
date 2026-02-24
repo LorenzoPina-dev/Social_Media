@@ -17,6 +17,7 @@ import { CacheService } from '../services/cache.service';
 import { PostModel } from '../models/post.model';
 import { HashtagModel } from '../models/hashtag.model';
 import { EditHistoryModel } from '../models/editHistory.model';
+import { SavedPostModel } from '../models/savedPost.model';
 
 import { PostProducer } from '../kafka/producers/post.producer';
 import { logger } from '../utils/logger';
@@ -27,6 +28,7 @@ let sharedInstances: {
   postModel: PostModel;
   hashtagModel: HashtagModel;
   editHistoryModel: EditHistoryModel;
+  savedPostModel: SavedPostModel;
   cacheService: CacheService;
   postProducer: PostProducer;
   hashtagService: HashtagService;
@@ -49,6 +51,7 @@ export function setupRoutes(app: Application): void {
   const postModel = new PostModel();
   const hashtagModel = new HashtagModel();
   const editHistoryModel = new EditHistoryModel();
+  const savedPostModel = new SavedPostModel();
 
   // ─── Infrastructure services ──────────────────────────────────────────────
   const cacheService = new CacheService();
@@ -60,6 +63,7 @@ export function setupRoutes(app: Application): void {
   const postService = new PostService(
     postModel,
     editHistoryModel,
+    savedPostModel,
     hashtagService,
     cacheService,
     postProducer,
@@ -70,6 +74,7 @@ export function setupRoutes(app: Application): void {
     postModel,
     hashtagModel,
     editHistoryModel,
+    savedPostModel,
     cacheService,
     postProducer,
     hashtagService,

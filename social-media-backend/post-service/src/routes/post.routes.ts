@@ -64,6 +64,14 @@ export function setupPostRoutes(postController: PostController): Router {
     postController.create.bind(postController),
   );
 
+  // List saved posts
+  router.get(
+    '/saved',
+    requireAuth,
+    validateQuery(listPostsQuery),
+    postController.getSavedPosts.bind(postController),
+  );
+
   // Get post by ID
   router.get(
     '/:id',
@@ -95,6 +103,22 @@ export function setupPostRoutes(postController: PostController): Router {
     requireAuth,
     validateParams(uuidParam),
     postController.getEditHistory.bind(postController),
+  );
+
+  // Save post
+  router.post(
+    '/:id/save',
+    requireAuth,
+    validateParams(uuidParam),
+    postController.savePost.bind(postController),
+  );
+
+  // Unsave post
+  router.delete(
+    '/:id/save',
+    requireAuth,
+    validateParams(uuidParam),
+    postController.unsavePost.bind(postController),
   );
 
   return router;

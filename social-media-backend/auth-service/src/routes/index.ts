@@ -17,6 +17,7 @@ import { SessionService } from '../services/session.service';
 import { UserModel } from '../models/user.model';
 import { SessionModel } from '../models/session.model';
 import { MFAModel } from '../models/mfa.model';
+import { PasswordResetModel } from '../models/passwordReset.model';
 
 import { AuthProducer } from '../kafka/producers/auth.producer';
 
@@ -29,6 +30,7 @@ export function setupRoutes(app: Application): void {
   const userModel = new UserModel();
   const sessionModel = new SessionModel();
   const mfaModel = new MFAModel();
+  const passwordResetModel = new PasswordResetModel();
 
   // Initialize services
   const jwtService = new JWTService();
@@ -38,6 +40,7 @@ export function setupRoutes(app: Application): void {
   const authService = new AuthService(
     userModel,
     sessionModel,
+    passwordResetModel,
     jwtService,
     sessionService,
     authProducer

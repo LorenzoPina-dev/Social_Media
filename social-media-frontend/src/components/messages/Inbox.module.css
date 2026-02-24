@@ -1,0 +1,99 @@
+.inbox {
+  display: flex;
+  flex-direction: column;
+}
+
+.conversation {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  text-decoration: none;
+  color: inherit;
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+
+.unread {
+  background: #f8fafc;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.username {
+  font-weight: 700;
+}
+
+.verifiedBadge {
+  margin-left: 5px;
+  color: #2563eb;
+}
+
+.timestamp {
+  font-size: 12px;
+  color: var(--color-text-muted, #6b7280);
+}
+
+.preview {
+  margin-top: 2px;
+  display: flex;
+  gap: 4px;
+}
+
+.you {
+  font-weight: 600;
+}
+
+.message {
+  color: var(--color-text-muted, #6b7280);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.unreadBadge {
+  min-width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #2563eb;
+  color: #fff;
+  font-size: 12px;
+}
+
+.loading {
+  padding: 12px;
+}
+
+.skeleton {
+  height: 56px;
+  border-radius: 8px;
+  background: #eef2f7;
+  margin-bottom: 10px;
+}
+
+.empty {
+  text-align: center;
+  padding: 28px 16px;
+}
+
+.emptyIcon {
+  font-size: 24px;
+}
+
+.emptyTitle {
+  margin: 8px 0 4px;
+}
+
+.emptyText {
+  color: var(--color-text-muted, #6b7280);
+}

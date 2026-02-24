@@ -116,4 +116,49 @@ export class PostController {
       next(error);
     }
   }
+
+  /**
+   * POST /api/v1/posts/:id/save
+   */
+  async savePost(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.id;
+      await this.postService.savePost(id, userId);
+      res.json({ success: true, message: 'Post saved successfully' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * DELETE /api/v1/posts/:id/save
+   */
+  async unsavePost(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.id;
+      await this.postService.unsavePost(id, userId);
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/v1/posts/saved
+   */
+  async getSavedPosts(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const { cursor, limit } = req.query as { cursor?: string; limit?: string };
+      const result = await this.postService.listSavedPosts(userId, {
+        cursor,
+        limit: limit ? parseInt(limit, 10) : undefined,
+      });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

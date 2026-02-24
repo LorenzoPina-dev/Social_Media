@@ -19,6 +19,7 @@ import { CacheService } from '../services/cache.service';
 
 import { UserModel } from '../models/user.model';
 import { FollowerModel } from '../models/follower.model';
+import { PrivacyModel } from '../models/privacy.model';
 
 import { UserProducer } from '../kafka/producers/user.producer';
 
@@ -31,6 +32,7 @@ export function setupRoutes(app: Application): void {
   // Initialize models
   const userModel = new UserModel();
   const followerModel = new FollowerModel();
+  const privacyModel = new PrivacyModel();
 
   // Initialize infrastructure services
   const cacheService = new CacheService();
@@ -39,6 +41,7 @@ export function setupRoutes(app: Application): void {
   // Initialize domain services
   const userService = new UserService(
     userModel,
+    privacyModel,
     cacheService,
     userProducer
   );

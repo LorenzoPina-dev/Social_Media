@@ -17,7 +17,7 @@ const HomePage = () => {
     openModal('create-post', <CreatePostModal isOpen={true} onClose={() => {}} />);
   };
 
-  if (!isAuthenticated) {
+  /*if (!isAuthenticated) {
     return (
       <div className={styles.landing}>
         <div className={styles.landingContent}>
@@ -36,7 +36,7 @@ const HomePage = () => {
         </div>
       </div>
     );
-  }
+  }*/
 
   return (
     <div className={styles.homePage}>

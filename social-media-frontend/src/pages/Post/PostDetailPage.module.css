@@ -1,0 +1,17 @@
+.postDetailPage {
+  display: grid;
+  justify-items: center;
+}
+
+.container {
+  width: 100%;
+  max-width: 760px;
+  display: grid;
+  gap: 14px;
+}
+
+.commentsSection {
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 12px;
+  padding: 12px;
+}
