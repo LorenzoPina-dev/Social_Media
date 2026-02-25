@@ -13,6 +13,8 @@ export type {
   LoginResultDto,
 } from '@social-media/shared';
 
+import { AppError } from '@social-media/shared';
+
 // ============================================================================
 // USER TYPES
 // ============================================================================
@@ -204,13 +206,13 @@ export type AuthEvent =
 // ERROR TYPES
 // ============================================================================
 
-export class AuthError extends Error {
+export class AuthError extends AppError {
   constructor(
     public code: string,
     message: string,
     public statusCode: number = 400
   ) {
-    super(message);
+    super(statusCode, code, message);
     this.name = 'AuthError';
   }
 }

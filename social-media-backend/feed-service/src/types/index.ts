@@ -161,5 +161,13 @@ export class TooManyRequestsError extends FeedError {
 
 // ── Express augmentation ──────────────────────────────────────────────────────
 
-// `Express.Request.user` is augmented centrally in @social-media/shared.
-
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        email: string;
+      };
+    }
+  }
+}

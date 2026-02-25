@@ -17,7 +17,7 @@ export type {
 // ============================================================================
 
 // Use shared NotificationType for cross-service consistency.
-export type { NotificationType } from '@social-media/shared';
+import type { NotificationType } from '@social-media/shared';
 export type EntityType = 'POST' | 'COMMENT' | 'USER';
 export type Platform = 'IOS' | 'ANDROID' | 'WEB';
 
@@ -198,13 +198,15 @@ export interface NotificationPaginatedResponse<T> {
 // ERRORS
 // ============================================================================
 
-export class NotificationError extends Error {
+import { AppError } from '@social-media/shared';
+
+export class NotificationError extends AppError {
   constructor(
     public code: string,
     message: string,
     public statusCode: number = 400,
   ) {
-    super(message);
+    super(statusCode, code, message);
     this.name = 'NotificationError';
   }
 }

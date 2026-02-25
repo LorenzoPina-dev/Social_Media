@@ -22,10 +22,10 @@ import { metrics } from '../utils/metrics';
 import { config } from '../config';
 import {
   Notification,
-  NotificationType,
   EntityType,
   NotificationPreferences,
 } from '../types';
+import { NotificationType } from '@social-media/shared';
 
 interface NotificationInput {
   recipientId: string;
@@ -225,11 +225,11 @@ export class NotificationService {
   private isPushEnabled(prefs: NotificationPreferences | undefined, type: NotificationType): boolean {
     if (!prefs) return true; // default: push abilitato
     switch (type) {
-      case 'LIKE': return prefs.likes_push;
-      case 'COMMENT': return prefs.comments_push;
-      case 'FOLLOW': return prefs.follows_push;
-      case 'MENTION': return prefs.mentions_push;
-      case 'SHARE': return prefs.likes_push; // reutilizza flag like
+      case 'like': return prefs.likes_push;
+      case 'comment': return prefs.comments_push;
+      case 'follow': return prefs.follows_push;
+      case 'mention': return prefs.mentions_push;
+      case 'share': return prefs.likes_push; // reutilizza flag like
       default: return true;
     }
   }
@@ -237,10 +237,10 @@ export class NotificationService {
   private isEmailEnabled(prefs: NotificationPreferences | undefined, type: NotificationType): boolean {
     if (!prefs) return false; // default: email disabilitata
     switch (type) {
-      case 'LIKE': return prefs.likes_email;
-      case 'COMMENT': return prefs.comments_email;
-      case 'FOLLOW': return prefs.follows_email;
-      case 'MENTION': return prefs.mentions_email;
+      case 'like': return prefs.likes_email;
+      case 'comment': return prefs.comments_email;
+      case 'follow': return prefs.follows_email;
+      case 'mention': return prefs.mentions_email;
       default: return false;
     }
   }

@@ -64,7 +64,7 @@ export class InteractionConsumer {
     await this.notificationService.notify({
       recipientId: postAuthorId,
       actorId: event.userId,
-      type: 'LIKE',
+      type: 'like',
       entityId: event.entityId,
       entityType: 'POST',
       title: 'Nuovo like',
@@ -83,7 +83,7 @@ export class InteractionConsumer {
       await this.notificationService.notify({
         recipientId: postInfo.userId,
         actorId: event.userId,
-        type: 'COMMENT',
+        type: 'comment',
         entityId: postId,
         entityType: 'POST',
         title: 'Nuovo commento',
@@ -118,7 +118,7 @@ export class InteractionConsumer {
     await this.notificationService.notify({
       recipientId: postAuthorId,
       actorId: event.userId,
-      type: 'SHARE',
+      type: 'share',
       entityId: postId,
       entityType: 'POST',
       title: 'Post condiviso',

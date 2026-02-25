@@ -48,7 +48,7 @@ export class ModerationConsumer {
 
     await this.notificationService.notify({
       recipientId: ownerId,
-      type: 'SYSTEM',
+      type: 'system',
       entityId: event.entityId,
       entityType: (event.payload?.entityType as 'POST' | 'COMMENT') || 'POST',
       title: 'Contenuto rimosso',
@@ -64,7 +64,7 @@ export class ModerationConsumer {
 
     await this.notificationService.notify({
       recipientId: ownerId,
-      type: 'SYSTEM',
+      type: 'system',
       entityId: event.entityId,
       entityType: (event.payload?.entityType as 'POST' | 'COMMENT') || 'POST',
       title: 'Contenuto approvato',

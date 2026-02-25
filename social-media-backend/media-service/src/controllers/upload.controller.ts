@@ -20,7 +20,7 @@ export class UploadController {
    * Body: { filename, content_type, size_bytes }
    */
   async requestPresignedUpload(req: Request, res: Response): Promise<void> {
-    const userId = req.user!.userId;
+    const userId = req.user!.id;
     const result = await this.uploadService.requestPresignedUpload(userId, req.body);
     created(res, result);
   }
@@ -29,7 +29,7 @@ export class UploadController {
    * POST /api/v1/media/upload/confirm/:mediaId
    */
   async confirmUpload(req: Request, res: Response): Promise<void> {
-    const userId = req.user!.userId;
+    const userId = req.user!.id;
     const { mediaId } = req.params;
     const media = await this.uploadService.confirmUpload(mediaId, userId);
     ok(res, media);
@@ -39,7 +39,7 @@ export class UploadController {
    * GET /api/v1/media/:mediaId/status
    */
   async getStatus(req: Request, res: Response): Promise<void> {
-    const userId = req.user!.userId;
+    const userId = req.user!.id;
     const { mediaId } = req.params;
     const media = await this.uploadService.getMediaStatus(mediaId, userId);
     ok(res, media);
@@ -49,7 +49,7 @@ export class UploadController {
    * DELETE /api/v1/media/:mediaId
    */
   async deleteMedia(req: Request, res: Response): Promise<void> {
-    const userId = req.user!.userId;
+    const userId = req.user!.id;
     const { mediaId } = req.params;
     await this.uploadService.deleteMedia(mediaId, userId);
     ok(res, { deleted: true }, 'Media deleted');
@@ -60,7 +60,7 @@ export class UploadController {
    * Query: { limit?, offset? }
    */
   async listUserMedia(req: Request, res: Response): Promise<void> {
-    const userId = req.user!.userId;
+    const userId = req.user!.id;
     const limit = parseInt(String(req.query.limit ?? 20), 10);
     const offset = parseInt(String(req.query.offset ?? 0), 10);
     const files = await this.uploadService.listUserMedia(userId, limit, offset);

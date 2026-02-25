@@ -10,7 +10,7 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
       statusCode: res.statusCode,
       duration: `${Date.now() - start}ms`,
       ip: req.ip,
-      userId: req.user?.userId,
+      userId: req.user?.id,
     });
   });
   next();

@@ -48,7 +48,7 @@ export class ModerationController {
   async resolveCase(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
     const { decision, reason } = req.body as { decision: string; reason?: string };
-    const decidedBy = req.user!.userId;
+    const decidedBy = req.user!.id;
 
     const result = await moderationService.resolveCase(
       id,
@@ -61,7 +61,7 @@ export class ModerationController {
 
   async assignCase(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
-    const moderatorId = req.user!.userId;
+    const moderatorId = req.user!.id;
 
     const updated = await moderationService.assignCase(id, moderatorId);
     ok(res, updated);

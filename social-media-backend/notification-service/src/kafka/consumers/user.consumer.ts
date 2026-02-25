@@ -57,7 +57,7 @@ export class UserEventConsumer {
     await this.notificationService.notify({
       recipientId: followingId,           // chi viene seguito riceve la notifica
       actorId: event.userId,              // chi ha premuto "segui"
-      type: 'FOLLOW',
+      type: 'follow',
       entityId: event.userId,
       entityType: 'USER',
       title: 'Nuovo follower',
@@ -76,7 +76,7 @@ export class UserEventConsumer {
     await this.notificationService.notify({
       recipientId,
       actorId: event.userId,
-      type: 'SYSTEM',
+      type: 'system',
       entityId: event.payload.messageId || event.payload.conversationId,
       entityType: 'USER',
       title: 'Nuovo messaggio',

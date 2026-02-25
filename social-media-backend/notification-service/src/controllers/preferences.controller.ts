@@ -13,7 +13,7 @@ export class PreferencesController {
    * GET /api/v1/notifications/preferences
    */
   async get(req: Request, res: Response): Promise<void> {
-    const userId = req.user!.userId;
+    const userId = req.user!.id;
     const prefs = await this.preferencesService.get(userId);
     ok(res, prefs);
   }
@@ -22,7 +22,7 @@ export class PreferencesController {
    * PUT /api/v1/notifications/preferences
    */
   async update(req: Request, res: Response): Promise<void> {
-    const userId = req.user!.userId;
+    const userId = req.user!.id;
     const prefs = await this.preferencesService.update(userId, req.body);
     ok(res, prefs);
   }

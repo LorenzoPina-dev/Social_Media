@@ -1,42 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { config } from '../config';
-import { logger } from '../utils/logger';
+import { createAuthMiddleware } from '@social-media/shared';
 import { fail } from '@social-media/shared';
+import config from '../config';
+import { logger } from '../utils/logger';
 
-export function requireAuth(req: Request, res: Response, next: NextFunction): void {
-  try {
-    const header = req.headers.authorization;
-    if (!header?.startsWith('Bearer ')) {
-      fail(res, 401, 'UNAUTHORIZED', 'Missing token');
-      return;
-    }
+const accessSecret = (config as any).JWT?.ACCESS_SECRET ?? (config as any).JWT_ACCESS_SECRET ?? process.env.JWT_ACCESS_SECRET ?? '';
+const { requireAuth, optionalAuth } = createAuthMiddleware(accessSecret);
 
-    const token = header.slice(7);
-    try {
-      const payload = jwt.verify(token, config.JWT_ACCESS_SECRET) as any;
-      req.user = payload;
-      next();
-    } catch (jwtErr: any) {
-      if (jwtErr.name === 'TokenExpiredError') {
-        fail(res, 401, 'UNAUTHORIZED', 'Token expired');
-        return;
-      }
-      fail(res, 401, 'UNAUTHORIZED', 'Invalid token');
-    }
-  } catch (error) {
-    logger.error('Auth middleware error', { error });
-    fail(res, 500, 'INTERNAL_ERROR', 'Internal server error');
-  }
-}
+export { requireAuth, optionalAuth };
+export default requireAuth;
 
-export function optionalAuth(req: Request, _: Response, next: NextFunction): void {
-  const header = req.headers.authorization;
-  if (header?.startsWith('Bearer ')) {
-    try {
-      const payload = jwt.verify(header.slice(7), config.JWT_ACCESS_SECRET) as any;
-      req.user = payload;
-    } catch { /* silent */ }
-  }
-  next();
-}
+// keep requireAdmin-like behavior available in services that need it via requireAuth wrapper

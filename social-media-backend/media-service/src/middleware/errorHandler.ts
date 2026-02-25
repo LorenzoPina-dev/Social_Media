@@ -14,7 +14,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
-import { AppError } from '../types';
+import { AppError } from '@social-media/shared';
 import { fail } from '@social-media/shared';
 
 // ─── Type guards ──────────────────────────────────────────────────────────────
@@ -140,7 +140,7 @@ export function errorHandler(
     stack: err?.stack,
     url: req.url,
     method: req.method,
-    userId: req.user?.userId,
+    userId: req.user?.id,
   });
 
   fail(

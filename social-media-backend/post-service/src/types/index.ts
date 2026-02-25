@@ -85,16 +85,7 @@ export interface CursorData {
 
 // ─── Errori custom ────────────────────────────────────────────────────────────
 
-export class AppError extends Error {
-  constructor(
-    public statusCode: number,
-    public code: string,
-    message: string,
-  ) {
-    super(message);
-    Object.setPrototypeOf(this, AppError.prototype);
-  }
-}
+import { AppError } from '@social-media/shared';
 
 export class ValidationError extends AppError {
   constructor(message: string) {
@@ -197,6 +188,8 @@ export interface ModerationStatusUpdatedEvent extends BaseKafkaEvent {
   };
 }
 
+
+export { AppError };
 // Canonical API envelopes and pagination types are exported from @social-media/shared.
 
 

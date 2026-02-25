@@ -4,7 +4,7 @@ import { created, ok } from '@social-media/shared';
 
 export class AppealController {
   async createAppeal(req: Request, res: Response): Promise<void> {
-    const userId = req.user!.userId;
+    const userId = req.user!.id;
     const { case_id, reason } = req.body as { case_id: string; reason: string };
 
     const appeal = await appealService.createAppeal(userId, { case_id, reason });
@@ -18,7 +18,7 @@ export class AppealController {
   }
 
   async getMyAppeals(req: Request, res: Response): Promise<void> {
-    const userId = req.user!.userId;
+    const userId = req.user!.id;
     const limit = Number(req.query.limit ?? 20);
     const offset = Number(req.query.offset ?? 0);
 
@@ -37,7 +37,7 @@ export class AppealController {
   async resolveAppeal(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
     const { status } = req.body as { status: 'GRANTED' | 'DENIED' };
-    const resolvedBy = req.user!.userId;
+    const resolvedBy = req.user!.id;
 
     const appeal = await appealService.resolveAppeal(id, { status }, resolvedBy);
     ok(res, appeal);

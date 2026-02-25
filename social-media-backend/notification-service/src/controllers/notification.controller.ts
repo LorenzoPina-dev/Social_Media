@@ -14,7 +14,7 @@ export class NotificationController {
    * GET /api/v1/notifications
    */
   async list(req: Request, res: Response): Promise<void> {
-    const userId = req.user!.userId;
+    const userId = req.user!.id;
     const limit = Math.min(parseInt(req.query['limit'] as string || '20', 10), 50);
     const cursor = req.query['cursor'] as string | undefined;
 
@@ -31,7 +31,7 @@ export class NotificationController {
    * GET /api/v1/notifications/unread-count
    */
   async unreadCount(req: Request, res: Response): Promise<void> {
-    const userId = req.user!.userId;
+    const userId = req.user!.id;
     const count = await this.notificationService.getUnreadCount(userId);
     ok(res, { count });
   }
@@ -40,7 +40,7 @@ export class NotificationController {
    * PUT /api/v1/notifications/:id/read
    */
   async markRead(req: Request, res: Response): Promise<void> {
-    const userId = req.user!.userId;
+    const userId = req.user!.id;
     const { id } = req.params;
 
     const updated = await this.notificationService.markAsRead(id, userId);
@@ -55,7 +55,7 @@ export class NotificationController {
    * PUT /api/v1/notifications/read-all
    */
   async markAllRead(req: Request, res: Response): Promise<void> {
-    const userId = req.user!.userId;
+    const userId = req.user!.id;
     const count = await this.notificationService.markAllAsRead(userId);
     ok(res, { markedCount: count });
   }

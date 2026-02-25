@@ -13,7 +13,7 @@ export class DeviceTokenController {
    * POST /api/v1/notifications/devices
    */
   async register(req: Request, res: Response): Promise<void> {
-    const userId = req.user!.userId;
+    const userId = req.user!.id;
     const { token, platform } = req.body;
 
     const deviceToken = await this.deviceTokenService.register(userId, token, platform);
@@ -24,7 +24,7 @@ export class DeviceTokenController {
    * DELETE /api/v1/notifications/devices/:token
    */
   async unregister(req: Request, res: Response): Promise<void> {
-    const userId = req.user!.userId;
+    const userId = req.user!.id;
     const { token } = req.params;
 
     const deleted = await this.deviceTokenService.unregister(userId, token);
@@ -39,7 +39,7 @@ export class DeviceTokenController {
    * GET /api/v1/notifications/devices
    */
   async list(req: Request, res: Response): Promise<void> {
-    const userId = req.user!.userId;
+    const userId = req.user!.id;
     const tokens = await this.deviceTokenService.getUserTokens(userId);
     ok(res, tokens);
   }

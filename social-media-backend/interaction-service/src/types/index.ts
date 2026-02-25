@@ -17,7 +17,7 @@ export type {
 // LIKE TYPES
 // ============================================================================
 
-export type LikeTargetType = 'POST' | 'COMMENT';
+export type { LikeTargetType } from '@social-media/shared';
 
 export interface Like {
   id: string;
@@ -100,79 +100,29 @@ export type { ApiResponse, PaginatedResponse } from '@social-media/shared';
 // KAFKA EVENT TYPES
 // ============================================================================
 
-export interface LikeCreatedEvent {
-  type: 'like_created';
-  entityId: string; // postId or commentId
-  userId: string;
-  timestamp: string;
-  payload: {
-    targetType: LikeTargetType;
-    targetId: string;
-  };
-}
-
-export interface LikeDeletedEvent {
-  type: 'like_deleted';
-  entityId: string;
-  userId: string;
-  timestamp: string;
-  payload: {
-    targetType: LikeTargetType;
-    targetId: string;
-  };
-}
-
-export interface CommentCreatedEvent {
-  type: 'comment_created';
-  entityId: string; // commentId
-  userId: string;
-  timestamp: string;
-  payload: {
-    postId: string;
-    parentId: string | null;
-    content: string;
-  };
-}
-
-export interface CommentDeletedEvent {
-  type: 'comment_deleted';
-  entityId: string; // commentId
-  userId: string;
-  timestamp: string;
-  payload: {
-    postId: string;
-  };
-}
-
-export interface ShareCreatedEvent {
-  type: 'share_created';
-  entityId: string; // postId
-  userId: string;
-  timestamp: string;
-  payload: {
-    shareId: string;
-    comment?: string;
-  };
-}
-
-export type InteractionEvent =
-  | LikeCreatedEvent
-  | LikeDeletedEvent
-  | CommentCreatedEvent
-  | CommentDeletedEvent
-  | ShareCreatedEvent;
+export type {
+  BaseEvent,
+  LikeCreatedEvent,
+  LikeDeletedEvent,
+  CommentCreatedEvent,
+  CommentDeletedEvent,
+  ShareCreatedEvent,
+  InteractionEvent,
+} from '@social-media/shared';
 
 // ============================================================================
 // ERROR TYPES
 // ============================================================================
 
-export class InteractionError extends Error {
+import { AppError, LikeTargetType } from '@social-media/shared';
+
+export class InteractionError extends AppError {
   constructor(
     public code: string,
     message: string,
     public statusCode: number = 400
   ) {
-    super(message);
+    super(statusCode, code, message);
     this.name = 'InteractionError';
   }
 }

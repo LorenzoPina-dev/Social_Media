@@ -116,19 +116,7 @@ export interface MediaDeletedEvent {
  * when compiled to ES5" — it works correctly under ES2015+ targets too.
  */
 
-export class AppError extends Error {
-  constructor(
-    public readonly statusCode: number,
-    public readonly code: string,
-    message: string,
-  ) {
-    super(message);
-    // Use new.target so that subclass instances keep their own prototype.
-    // Without this, `instanceof ValidationError` would return false.
-    Object.setPrototypeOf(this, new.target.prototype);
-    this.name = new.target.name;
-  }
-}
+import { AppError } from '@social-media/shared';
 
 export class ValidationError extends AppError {
   constructor(msg: string) {

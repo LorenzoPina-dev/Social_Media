@@ -99,16 +99,7 @@ export interface ImageAnalysisResult {
 // Errors
 // ────────────────────────────────────────────────────────────
 
-export class AppError extends Error {
-  constructor(
-    public statusCode: number,
-    public code: string,
-    message: string,
-  ) {
-    super(message);
-    this.name = 'AppError';
-  }
-}
+import { AppError } from '@social-media/shared';
 
 export class ValidationError extends AppError {
   constructor(msg: string) {
@@ -192,6 +183,8 @@ export interface PostCreatedEvent extends KafkaBaseEvent {
   };
 }
 
+
+export { AppError };
 // ────────────────────────────────────────────────────────────
 // JWT TokenPayload
 // ────────────────────────────────────────────────────────────

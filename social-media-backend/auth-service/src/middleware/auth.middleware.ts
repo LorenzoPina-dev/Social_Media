@@ -5,10 +5,10 @@
  * `@social-media/shared`.
  */
 import { createAuthMiddleware } from '@social-media/shared';
+import config from '../config';
 
-const { requireAuth, optionalAuth } = createAuthMiddleware(
-  process.env.JWT_ACCESS_SECRET || 'secret'
-);
+const accessSecret = (config as any).JWT?.ACCESS_SECRET ?? (config as any).JWT_ACCESS_SECRET ?? process.env.JWT_ACCESS_SECRET ?? 'secret';
+const { requireAuth, optionalAuth } = createAuthMiddleware(accessSecret);
 
 export { requireAuth, optionalAuth };
 export default requireAuth;

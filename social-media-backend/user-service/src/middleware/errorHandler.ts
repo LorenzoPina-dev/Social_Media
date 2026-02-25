@@ -5,18 +5,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
-import { fail } from '@social-media/shared';
-
-export class AppError extends Error {
-  constructor(
-    public statusCode: number,
-    public message: string,
-    public isOperational = true
-  ) {
-    super(message);
-    Object.setPrototypeOf(this, AppError.prototype);
-  }
-}
+import { fail, AppError } from '@social-media/shared';
 
 export function errorHandler(
   err: Error | AppError,
