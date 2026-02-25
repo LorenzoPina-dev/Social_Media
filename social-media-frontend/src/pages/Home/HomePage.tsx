@@ -58,7 +58,7 @@ const HomePage = () => {
       
       {!isMobile && (
         <aside className={styles.sidebar}>
-          <Link to={user?.username ? `/profile/${user.username}` : '/'} className={styles.userInfo}>
+          <Link to={user?.id ? `/profile/${user.id}` : '/'} className={styles.userInfo}>
             <Avatar
               src={user?.avatar_url}
               username={user?.username}

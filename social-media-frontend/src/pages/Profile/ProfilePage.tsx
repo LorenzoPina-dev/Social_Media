@@ -5,6 +5,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { PageLoader } from '@/components/common/Loading/PageLoader';
 import { NotFound } from '@/components/common/Error/NotFound';
 import styles from './ProfilePage.module.css';
+import toast from 'react-hot-toast';
 
 const ProfilePage = () => {
   const { username } = useParams<{ username: string }>();
@@ -28,6 +29,7 @@ const ProfilePage = () => {
   }
 
   return (
+    
     <div className={styles.profilePage}>
       <ProfileHeader
         profile={profile}

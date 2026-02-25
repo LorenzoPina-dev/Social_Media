@@ -21,7 +21,9 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: process.env.VITE_API_GATEWAY_URL || 'http://127.0.0.1',
+        // Use localhost by default so requests target http://localhost
+        // (no port) when the env var is not set.
+        target: process.env.VITE_API_GATEWAY_URL || 'http://localhost',
         changeOrigin: true,
       },
       '/socket.io': {

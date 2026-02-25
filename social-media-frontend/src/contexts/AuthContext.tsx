@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@/types/auth.types';
 import { login as apiLogin, logout as apiLogout } from '@/api/auth';
-import toast from 'react-hot-toast';
+import toast, { ToastBar } from 'react-hot-toast';
 import { getCurrentUser } from '@/api/users';
 import { unwrapData } from '@/api/envelope';
 

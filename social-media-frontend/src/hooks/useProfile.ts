@@ -8,7 +8,7 @@ import { useAuth } from './useAuth';
 import toast from 'react-hot-toast';
 import { unwrapCursorPage, unwrapData } from '@/api/envelope';
 
-export const useProfile = (username?: string) => {
+export const useProfile = (id?: string) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -19,14 +19,14 @@ export const useProfile = (username?: string) => {
 
   const { user, updateUser } = useAuth();
   const navigate = useNavigate();
-  const isOwnProfile = user?.username === username;
+  const isOwnProfile = user?.id === id;
 
   const fetchProfile = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await getUserProfile(username);
+      const response = await getUserProfile(id);
       setProfile(unwrapData<Profile>(response.data));
     } catch (err) {
       setError(err as Error);
@@ -36,7 +36,7 @@ export const useProfile = (username?: string) => {
     } finally {
       setIsLoading(false);
     }
-  }, [username, navigate]);
+  }, [id, navigate]);
 
   const fetchPosts = useCallback(
     async (reset = false) => {
@@ -66,10 +66,10 @@ export const useProfile = (username?: string) => {
   );
 
   useEffect(() => {
-    if (username) {
+    if (id) {
       fetchProfile();
     }
-  }, [username, fetchProfile]);
+  }, [id, fetchProfile]);
 
   useEffect(() => {
     if (profile?.id) {

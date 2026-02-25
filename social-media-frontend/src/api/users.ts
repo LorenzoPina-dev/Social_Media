@@ -13,6 +13,7 @@ import {
   PrivacySettings,
 } from '@/types/user.types';
 import { CursorParams, PaginatedResponse } from '@/types/api.types';
+import toast from 'react-hot-toast';
 
 interface JwtPayload {
   userId?: string;
@@ -72,6 +73,7 @@ const filterOutCurrentUserFromResponse = (responseData: any): any => {
 };
 
 const resolveUserId = async (identifier?: string): Promise<string> => {
+  toast.success(`Caricamento del profilo di ${identifier}`);
   if (!identifier) return requireCurrentUserId();
   if (UUID_REGEX.test(identifier)) return identifier;
 

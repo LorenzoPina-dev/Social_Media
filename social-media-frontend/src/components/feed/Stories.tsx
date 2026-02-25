@@ -50,7 +50,7 @@ export const Stories: React.FC = () => {
   return (
     <div className={styles.stories}>
       {stories.map((user) => (
-        <Link key={user.id} to={`/profile/${user.username}`} className={styles.story}>
+        <Link key={user.id} to={`/profile/${user.id}`} className={styles.story}>
           <div className={styles.storyRing}>
             <Avatar
               src={user.avatar_url}
