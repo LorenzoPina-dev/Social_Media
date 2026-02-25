@@ -2,59 +2,16 @@
  * TypeScript Type Definitions
  * Auth Service
  */
-export interface ApiSuccess<T> {
-  success: true;
-  data: T;
-  message?: string;
-}
-
-export interface ApiFailure {
-  success: false;
-  error: string;
-  code: string;
-  details?: Array<{ field?: string; message: string }>;
-}
-
-export type ApiEnvelope<T> = ApiSuccess<T> | ApiFailure;
-
-export interface CursorPage<T> {
-  items: T[];
-  cursor?: string;
-  has_more: boolean;
-}
-
-export interface OffsetPage<T> {
-  items: T[];
-  total: number;
-  limit: number;
-  offset: number;
-}
-
-export interface UserDto {
-  id: string;
-  username: string;
-  email?: string;
-  display_name?: string;
-  avatar_url?: string;
-  bio?: string;
-  verified?: boolean;
-  follower_count?: number;
-  following_count?: number;
-  created_at?: string | Date;
-  updated_at?: string | Date;
-}
-
-export interface TokenPairDto {
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
-}
-
-export interface LoginResultDto {
-  user: UserDto;
-  tokens: TokenPairDto;
-  mfa_required?: boolean;
-}
+export type {
+  ApiEnvelope,
+  ApiFailure,
+  ApiSuccess,
+  CursorPage,
+  OffsetPage,
+  UserDto,
+  TokenPairDto,
+  LoginResultDto,
+} from '@social-media/shared/dist/types/contracts.types';
 
 // ============================================================================
 // USER TYPES
@@ -205,7 +162,7 @@ export interface OAuthAccount {
   created_at: Date;
 }
 
-// Canonical API envelopes are exported from @social-media/shared.
+// Canonical API envelopes are exported from @social-media/shared/dist/types/contracts.types.
 
 // ============================================================================
 // EVENT TYPES (for Kafka)
@@ -311,3 +268,5 @@ export class TooManyRequestsError extends AuthError {
     this.name = 'TooManyRequestsError';
   }
 }
+
+

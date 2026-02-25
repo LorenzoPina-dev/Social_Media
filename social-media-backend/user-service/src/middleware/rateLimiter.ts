@@ -8,6 +8,7 @@ import RedisStore from 'rate-limit-redis';
 import { getRedisClient } from '../config/redis';
 import { config } from '../config';
 import { logger } from '../utils/logger';
+import { fail } from '@social-media/shared/dist/utils/http';
 
 /**
  * General API rate limiter
@@ -40,10 +41,7 @@ export const apiLimiter = rateLimit({
       ip: req.ip,
       path: req.path,
     });
-    res.status(429).json({
-      error: 'Too many requests',
-      message: 'You have exceeded the rate limit. Please try again later.',
-    });
+    fail(res, 429, 'TOO_MANY_REQUESTS', 'You have exceeded the rate limit. Please try again later.');
   },
 });
 
@@ -72,6 +70,9 @@ export const strictLimiter = rateLimit({
       return undefined;
     }
   })(),
+  handler: (_req, res) => {
+    fail(res, 429, 'TOO_MANY_REQUESTS', 'This action is rate limited. Please try again later.');
+  },
 });
 
 /**
@@ -98,6 +99,9 @@ export const searchLimiter = rateLimit({
       return undefined;
     }
   })(),
+  handler: (_req, res) => {
+    fail(res, 429, 'TOO_MANY_SEARCH_REQUESTS', 'Please slow down your search requests.');
+  },
 });
 
 /**
@@ -125,6 +129,9 @@ export const followLimiter = rateLimit({
       return undefined;
     }
   })(),
+  handler: (_req, res) => {
+    fail(res, 429, 'TOO_MANY_FOLLOW_REQUESTS', 'Please slow down.');
+  },
 });
 
 export default {

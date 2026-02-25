@@ -6,6 +6,7 @@
 import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 import { logger } from '../utils/logger';
+import { fail } from '@social-media/shared';
 
 /**
  * Validate request body against Joi schema
@@ -25,12 +26,7 @@ export function validateBody(schema: Joi.Schema) {
 
       logger.warn('Validation failed', { errors, body: req.body });
 
-      res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        code: 'VALIDATION_ERROR',
-        details: errors,
-      });
+      fail(res, 400, 'VALIDATION_ERROR', 'Validation failed', errors);
       return;
     }
 
@@ -58,12 +54,7 @@ export function validateQuery(schema: Joi.Schema) {
 
       logger.warn('Query validation failed', { errors, query: req.query });
 
-      res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        code: 'VALIDATION_ERROR',
-        details: errors,
-      });
+      fail(res, 400, 'VALIDATION_ERROR', 'Validation failed', errors);
       return;
     }
 
@@ -90,12 +81,7 @@ export function validateParams(schema: Joi.Schema) {
 
       logger.warn('Params validation failed', { errors, params: req.params });
 
-      res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        code: 'VALIDATION_ERROR',
-        details: errors,
-      });
+      fail(res, 400, 'VALIDATION_ERROR', 'Validation failed', errors);
       return;
     }
 

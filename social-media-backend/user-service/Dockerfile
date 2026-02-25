@@ -42,6 +42,8 @@ CMD ["sh", "-c", "\
   echo '📦 Creating DB and running migrations...' && \
   node dist/scripts/init-db.js && \
   echo '✅ Migrations completed successfully' && \
+  echo '📦 cartella dist...' && \
+  ls -la dist && \
   echo '🚀 Starting user-service...' && \
   node dist/index.js \
 "]

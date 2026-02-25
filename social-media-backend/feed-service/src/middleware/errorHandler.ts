@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 import { FeedError } from '../types';
+import { fail } from '@social-media/shared/dist/utils/http';
 
 export function errorHandler(
   error: Error,
@@ -16,28 +17,21 @@ export function errorHandler(
   });
 
   if (error instanceof FeedError) {
-    res.status(error.statusCode).json({
-      success: false,
-      error: error.message,
-      code: error.code,
-    });
+    fail(res, error.statusCode, error.code, error.message);
     return;
   }
 
   if (error.name === 'ValidationError') {
-    res.status(400).json({
-      success: false,
-      error: 'Validation failed',
-      code: 'VALIDATION_ERROR',
-      details: error.message,
-    });
+    fail(res, 400, 'VALIDATION_ERROR', 'Validation failed', [
+      { message: error.message },
+    ]);
     return;
   }
 
-  res.status(500).json({
-    success: false,
-    error:
-      process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message,
-    code: 'INTERNAL_ERROR',
-  });
+  fail(
+    res,
+    500,
+    'INTERNAL_ERROR',
+    process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message,
+  );
 }

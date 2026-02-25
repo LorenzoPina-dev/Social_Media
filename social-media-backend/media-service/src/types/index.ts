@@ -2,6 +2,16 @@
  * Types — media-service
  */
 
+export type {
+  ApiEnvelope,
+  ApiFailure,
+  ApiSuccess,
+  CursorPage,
+  OffsetPage,
+  PostDto,
+  UserDto,
+} from '@social-media/shared/dist/types/contracts.types';
+
 // ─── DB Entities ───────────────────────────────────────────────────────────────
 
 export type MediaStatus = 'UPLOADING' | 'PROCESSING' | 'READY' | 'FAILED' | 'DELETED';
@@ -105,6 +115,7 @@ export interface MediaDeletedEvent {
  * This is the standard fix for "instanceof broken for subclassed built-ins
  * when compiled to ES5" — it works correctly under ES2015+ targets too.
  */
+
 export class AppError extends Error {
   constructor(
     public readonly statusCode: number,
@@ -185,3 +196,8 @@ declare global {
     }
   }
 }
+
+
+
+
+

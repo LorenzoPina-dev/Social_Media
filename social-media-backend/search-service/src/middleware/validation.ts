@@ -5,6 +5,7 @@
 import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 import { logger } from '../utils/logger';
+import { fail } from '@social-media/shared/dist/utils/http';
 
 export function validateQuery(schema: Joi.Schema) {
   return (req: Request, res: Response, next: NextFunction): void => {
@@ -19,12 +20,7 @@ export function validateQuery(schema: Joi.Schema) {
         message: d.message,
       }));
       logger.warn('Query validation failed', { details });
-      res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        code: 'VALIDATION_ERROR',
-        details,
-      });
+      fail(res, 400, 'VALIDATION_ERROR', 'Validation failed', details);
       return;
     }
 
@@ -46,12 +42,7 @@ export function validateBody(schema: Joi.Schema) {
         message: d.message,
       }));
       logger.warn('Body validation failed', { details });
-      res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        code: 'VALIDATION_ERROR',
-        details,
-      });
+      fail(res, 400, 'VALIDATION_ERROR', 'Validation failed', details);
       return;
     }
 

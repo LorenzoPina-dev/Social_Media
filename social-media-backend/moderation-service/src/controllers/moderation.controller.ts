@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { moderationService } from '../services/moderation.service';
 import { EntityType, CaseStatus } from '../types';
+import { created, ok } from '@social-media/shared/dist/utils/http';
 
 export class ModerationController {
   async reportContent(req: Request, res: Response): Promise<void> {
@@ -20,20 +21,20 @@ export class ModerationController {
       media_urls,
     });
 
-    res.status(201).json({ success: true, data: moderationCase });
+    created(res, moderationCase);
   }
 
   async getCaseById(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
     const moderationCase = await moderationService.getCaseById(id);
-    res.json({ success: true, data: moderationCase });
+    ok(res, moderationCase);
   }
 
   async getCasesByEntity(req: Request, res: Response): Promise<void> {
     const { entityId } = req.params;
     const { entity_type } = req.query as { entity_type?: EntityType };
     const cases = await moderationService.getCasesByEntity(entityId, entity_type);
-    res.json({ success: true, data: cases });
+    ok(res, cases);
   }
 
   async getCasesByStatus(req: Request, res: Response): Promise<void> {
@@ -41,7 +42,7 @@ export class ModerationController {
     const limit = Number(req.query.limit ?? 20);
     const offset = Number(req.query.offset ?? 0);
     const cases = await moderationService.getCasesByStatus(status, limit, offset);
-    res.json({ success: true, data: cases });
+    ok(res, cases);
   }
 
   async resolveCase(req: Request, res: Response): Promise<void> {
@@ -55,7 +56,7 @@ export class ModerationController {
       decidedBy,
     );
 
-    res.json({ success: true, data: result });
+    ok(res, result);
   }
 
   async assignCase(req: Request, res: Response): Promise<void> {
@@ -63,7 +64,7 @@ export class ModerationController {
     const moderatorId = req.user!.userId;
 
     const updated = await moderationService.assignCase(id, moderatorId);
-    res.json({ success: true, data: updated });
+    ok(res, updated);
   }
 }
 

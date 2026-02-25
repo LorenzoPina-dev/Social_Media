@@ -4,8 +4,7 @@
 
 import { Request, Response } from 'express';
 import { LikeService } from '../services/like.service';
-import { LikeTargetType } from '../types';
-import { logger } from '../utils/logger';
+import { created, ok } from '@social-media/shared/dist/utils/http';
 
 export class LikeController {
   constructor(private readonly likeService: LikeService) {}
@@ -19,10 +18,7 @@ export class LikeController {
 
     const { like, count } = await this.likeService.addLike(userId, postId, 'POST');
 
-    res.status(201).json({
-      success: true,
-      data: { like, like_count: count },
-    });
+    created(res, { like, like_count: count });
   }
 
   /**
@@ -34,10 +30,7 @@ export class LikeController {
 
     const { count } = await this.likeService.removeLike(userId, postId, 'POST');
 
-    res.status(200).json({
-      success: true,
-      data: { like_count: count },
-    });
+    ok(res, { like_count: count });
   }
 
   /**
@@ -49,10 +42,7 @@ export class LikeController {
 
     const { like, count } = await this.likeService.addLike(userId, commentId, 'COMMENT');
 
-    res.status(201).json({
-      success: true,
-      data: { like, like_count: count },
-    });
+    created(res, { like, like_count: count });
   }
 
   /**
@@ -64,10 +54,7 @@ export class LikeController {
 
     const { count } = await this.likeService.removeLike(userId, commentId, 'COMMENT');
 
-    res.status(200).json({
-      success: true,
-      data: { like_count: count },
-    });
+    ok(res, { like_count: count });
   }
 
   /**
@@ -82,9 +69,6 @@ export class LikeController {
       isLiked = await this.likeService.hasLiked(req.user.id, postId, 'POST');
     }
 
-    res.status(200).json({
-      success: true,
-      data: { post_id: postId, like_count: count, is_liked: isLiked },
-    });
+    ok(res, { post_id: postId, like_count: count, is_liked: isLiked });
   }
 }

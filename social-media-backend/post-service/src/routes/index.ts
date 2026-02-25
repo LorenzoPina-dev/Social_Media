@@ -21,6 +21,7 @@ import { SavedPostModel } from '../models/savedPost.model';
 
 import { PostProducer } from '../kafka/producers/post.producer';
 import { logger } from '../utils/logger';
+import { fail } from '@social-media/shared/dist/utils/http';
 
 // ─── Shared instances (singleton per processo) ────────────────────────────────
 
@@ -90,7 +91,7 @@ export function setupRoutes(app: Application): void {
 
   // 404 — intercetta tutte le route non registrate
   app.use('*', (_, res) => {
-    res.status(404).json({ success: false, error: 'Route not found', code: 'NOT_FOUND' });
+    fail(res, 404, 'NOT_FOUND', 'Route not found');
   });
 
   logger.info('Post routes configured successfully');

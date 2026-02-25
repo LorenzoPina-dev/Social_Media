@@ -1,3 +1,13 @@
+export type {
+  ApiEnvelope,
+  ApiFailure,
+  ApiSuccess,
+  CursorPage,
+  OffsetPage,
+  PostDto,
+  UserDto,
+} from '@social-media/shared/dist/types/contracts.types';
+
 // ────────────────────────────────────────────────────────────
 // Entities (rispecchiano le tabelle del DB)
 // ────────────────────────────────────────────────────────────
@@ -205,3 +215,8 @@ declare global {
     }
   }
 }
+
+
+
+
+

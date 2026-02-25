@@ -2,47 +2,15 @@
  * TypeScript Type Definitions
  * User Service
  */
-export interface ApiSuccess<T> {
-  success: true;
-  data: T;
-  message?: string;
-}
 
-export interface ApiFailure {
-  success: false;
-  error: string;
-  code: string;
-  details?: Array<{ field?: string; message: string }>;
-}
-
-export type ApiEnvelope<T> = ApiSuccess<T> | ApiFailure;
-
-export interface CursorPage<T> {
-  items: T[];
-  cursor?: string;
-  has_more: boolean;
-}
-
-export interface OffsetPage<T> {
-  items: T[];
-  total: number;
-  limit: number;
-  offset: number;
-}
-
-export interface UserDto {
-  id: string;
-  username: string;
-  email?: string;
-  display_name?: string;
-  avatar_url?: string;
-  bio?: string;
-  verified?: boolean;
-  follower_count?: number;
-  following_count?: number;
-  created_at?: string | Date;
-  updated_at?: string | Date;
-}
+export type {
+  ApiEnvelope,
+  ApiFailure,
+  ApiSuccess,
+  CursorPage,
+  OffsetPage,
+  UserDto,
+} from '@social-media/shared/dist/types/contracts.types';
 
 export interface User {
   id: string;
@@ -51,6 +19,8 @@ export interface User {
   display_name: string;
   bio?: string;
   avatar_url?: string;
+  website_url?: string;
+  location?: string;
   verified: boolean;
   follower_count: number;
   following_count: number;
@@ -64,15 +34,20 @@ export interface CreateUserDto {
   id: string;
   username: string;
   email: string;
-  display_name?: string;  // opzionale: può non essere presente all'evento Kafka
+  // Optional: can be missing in auth kafka event
+  display_name?: string;
   bio?: string;
   avatar_url?: string;
+  website_url?: string;
+  location?: string;
 }
 
 export interface UpdateUserDto {
   display_name?: string;
   bio?: string;
   avatar_url?: string;
+  website_url?: string;
+  location?: string;
 }
 
 export interface PrivacySettings {
@@ -114,7 +89,6 @@ export interface UserProfile extends User {
   followers?: User[];
   following?: User[];
 }
-// Canonical pagination types are exported from @social-media/shared.
 
 export interface SearchFilters {
   verified?: boolean;
@@ -129,3 +103,6 @@ export interface GDPRExportData {
   exportDate: Date;
   format: 'json';
 }
+
+
+

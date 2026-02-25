@@ -258,7 +258,6 @@ services:
       - ./auth-service/migrations:/app/migrations:delegated
       - ./auth-service/scripts:/app/scripts:delegated
       - ./shared:/app/shared:delegated
-      - auth_node_modules:/app/node_modules
     ports:
       - "3001:3001"
     environment:
@@ -464,8 +463,8 @@ services:
     <<: *common-service
     container_name: social-feed-service
     build:
-      context: ./feed-service
-      dockerfile: Dockerfile 
+      context: .               # monorepo context (include /shared)
+      dockerfile: ./feed-service/Dockerfile
     volumes:
       - ./feed-service/src:/app/src:delegated
       - ./shared:/app/shared:delegated
@@ -543,8 +542,8 @@ services:
     <<: *common-service
     container_name: social-search-service
     build:
-      context: ./search-service
-      dockerfile: Dockerfile 
+      context: .               # monorepo context (include /shared)
+      dockerfile: ./search-service/Dockerfile
     volumes:
       - ./search-service/src:/app/src:delegated
       - ./shared:/app/shared:delegated

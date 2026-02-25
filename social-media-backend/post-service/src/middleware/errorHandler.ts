@@ -5,6 +5,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 import { AppError } from '../types';
+import { fail } from '@social-media/shared/dist/utils/http';
 
 export function errorHandler(err: Error, req: Request, res: Response, _: NextFunction): void {
   logger.error('Error occurred', {
@@ -15,20 +16,17 @@ export function errorHandler(err: Error, req: Request, res: Response, _: NextFun
   });
 
   if (err instanceof AppError) {
-    res.status(err.statusCode).json({
-      success: false,
-      error: err.message,
-      code: err.code,
-    });
+    fail(res, err.statusCode, err.code, err.message);
     return;
   }
 
-  res.status(500).json({
-    success: false,
-    error: 'Internal server error',
-    code: 'INTERNAL_ERROR',
-    ...(process.env.NODE_ENV === 'development' && { message: err.message }),
-  });
+  fail(
+    res,
+    500,
+    'INTERNAL_ERROR',
+    'Internal server error',
+    process.env.NODE_ENV === 'development' ? [{ message: err.message }] : undefined,
+  );
 }
 
 export default errorHandler;

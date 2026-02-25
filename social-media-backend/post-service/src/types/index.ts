@@ -5,7 +5,7 @@ export type {
   CursorPage,
   OffsetPage,
   PostDto,
-} from '@social-media/shared';
+} from '@social-media/shared/dist/types/contracts.types';
 
 /**
  * Post Service — Type Definitions
@@ -197,5 +197,8 @@ export interface ModerationStatusUpdatedEvent extends BaseKafkaEvent {
   };
 }
 
-// Canonical API envelopes and pagination types are exported from @social-media/shared.
+// Canonical API envelopes and pagination types are exported from @social-media/shared/dist/types/contracts.types.
+
+
+
 

@@ -6,6 +6,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
 import { logger } from '../utils/logger';
+import { fail } from '@social-media/shared/dist/utils/http';
 
 interface JWTPayload {
   userId: string;
@@ -19,7 +20,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
-      res.status(401).json({ success: false, error: 'No token provided', code: 'UNAUTHORIZED' });
+      fail(res, 401, 'UNAUTHORIZED', 'No token provided');
       return;
     }
 
@@ -31,14 +32,14 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     } catch (jwtError: unknown) {
       const err = jwtError as Error;
       if (err.name === 'TokenExpiredError') {
-        res.status(401).json({ success: false, error: 'Token expired', code: 'TOKEN_EXPIRED' });
+        fail(res, 401, 'TOKEN_EXPIRED', 'Token expired');
         return;
       }
-      res.status(401).json({ success: false, error: 'Invalid token', code: 'INVALID_TOKEN' });
+      fail(res, 401, 'INVALID_TOKEN', 'Invalid token');
     }
   } catch (error) {
     logger.error('Authentication error', { error });
-    res.status(500).json({ success: false, error: 'Internal server error', code: 'INTERNAL_ERROR' });
+    fail(res, 500, 'INTERNAL_ERROR', 'Internal server error');
   }
 }
 

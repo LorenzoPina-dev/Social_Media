@@ -1,6 +1,7 @@
 import rateLimit from 'express-rate-limit';
 import { config } from '../config';
 import { logger } from '../utils/logger';
+import { fail } from '@social-media/shared/dist/utils/http';
 
 export const apiLimiter = rateLimit({
   windowMs: config.RATE_LIMIT.WINDOW_MS,
@@ -9,7 +10,7 @@ export const apiLimiter = rateLimit({
   legacyHeaders: false,
   handler: (req, res) => {
     logger.warn('Rate limit exceeded', { ip: req.ip, path: req.path });
-    res.status(429).json({ success: false, error: 'Too many requests', code: 'TOO_MANY_REQUESTS' });
+    fail(res, 429, 'TOO_MANY_REQUESTS', 'Too many requests');
   },
 });
 
@@ -20,6 +21,6 @@ export const uploadLimiter = rateLimit({
   legacyHeaders: false,
   handler: (req, res) => {
     logger.warn('Upload rate limit exceeded', { ip: req.ip });
-    res.status(429).json({ success: false, error: 'Too many upload requests', code: 'TOO_MANY_REQUESTS' });
+    fail(res, 429, 'TOO_MANY_REQUESTS', 'Too many upload requests');
   },
 });

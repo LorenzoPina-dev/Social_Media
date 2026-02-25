@@ -4,7 +4,7 @@
 
 import { Request, Response } from 'express';
 import { CommentService } from '../services/comment.service';
-import { logger } from '../utils/logger';
+import { created, noContent, ok } from '@social-media/shared/dist/utils/http';
 
 export class CommentController {
   constructor(private readonly commentService: CommentService) {}
@@ -24,10 +24,7 @@ export class CommentController {
       content,
     });
 
-    res.status(201).json({
-      success: true,
-      data: comment,
-    });
+    created(res, comment);
   }
 
   /**
@@ -44,9 +41,8 @@ export class CommentController {
       cursor
     );
 
-    res.status(200).json({
-      success: true,
-      data: comments,
+    ok(res, {
+      items: comments,
       pagination: { cursor: nextCursor, has_more: hasMore },
     });
   }
@@ -60,10 +56,7 @@ export class CommentController {
 
     const replies = await this.commentService.getReplies(commentId, limit);
 
-    res.status(200).json({
-      success: true,
-      data: replies,
-    });
+    ok(res, replies);
   }
 
   /**
@@ -73,7 +66,7 @@ export class CommentController {
     const { commentId } = req.params;
     const comment = await this.commentService.getCommentById(commentId);
 
-    res.status(200).json({ success: true, data: comment });
+    ok(res, comment);
   }
 
   /**
@@ -85,6 +78,6 @@ export class CommentController {
 
     await this.commentService.deleteComment(commentId, userId);
 
-    res.status(204).send();
+    noContent(res);
   }
 }

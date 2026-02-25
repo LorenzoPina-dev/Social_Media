@@ -4,6 +4,7 @@
 
 import { Request, Response } from 'express';
 import { PreferencesService } from '../services/preferences.service';
+import { ok } from '@social-media/shared/dist/utils/http';
 
 export class PreferencesController {
   constructor(private readonly preferencesService: PreferencesService) {}
@@ -14,7 +15,7 @@ export class PreferencesController {
   async get(req: Request, res: Response): Promise<void> {
     const userId = req.user!.userId;
     const prefs = await this.preferencesService.get(userId);
-    res.json({ success: true, data: prefs });
+    ok(res, prefs);
   }
 
   /**
@@ -23,6 +24,6 @@ export class PreferencesController {
   async update(req: Request, res: Response): Promise<void> {
     const userId = req.user!.userId;
     const prefs = await this.preferencesService.update(userId, req.body);
-    res.json({ success: true, data: prefs });
+    ok(res, prefs);
   }
 }

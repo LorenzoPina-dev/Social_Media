@@ -6,6 +6,7 @@ import { Request, Response, NextFunction } from 'express';
 import { getRedisClient } from '../config/redis';
 import { config } from '../config';
 import { logger } from '../utils/logger';
+import { fail } from '@social-media/shared/dist/utils/http';
 
 interface RateLimiterOptions {
   windowMs?: number;
@@ -31,12 +32,12 @@ export function rateLimiter(options: RateLimiterOptions = {}) {
 
       if (count >= maxRequests) {
         const ttl = await redis.ttl(key);
-        res.status(429).json({
-          success: false,
-          error: 'Too many requests',
-          code: 'RATE_LIMIT_EXCEEDED',
-          retryAfter: ttl > 0 ? ttl : Math.ceil(windowMs / 1000),
-        });
+        fail(res, 429, 'RATE_LIMIT_EXCEEDED', 'Too many requests', [
+          {
+            field: 'retryAfter',
+            message: String(ttl > 0 ? ttl : Math.ceil(windowMs / 1000)),
+          },
+        ]);
         return;
       }
 

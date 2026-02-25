@@ -1,3 +1,13 @@
+export type {
+  ApiEnvelope,
+  ApiFailure,
+  ApiSuccess,
+  CursorPage,
+  OffsetPage,
+  PostDto,
+  UserDto,
+} from '@social-media/shared/dist/types/contracts.types';
+
 /**
  * Search Service — Type Definitions
  */
@@ -209,3 +219,4 @@ export class ElasticsearchError extends SearchError {
     this.name = 'ElasticsearchError';
   }
 }
+

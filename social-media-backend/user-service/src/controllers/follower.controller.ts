@@ -7,6 +7,7 @@ import { Request, Response } from 'express';
 import { FollowerService } from '../services/follower.service';
 import { logger } from '../utils/logger';
 import { userMetrics } from '../utils/metrics';
+import { fail, ok } from '@social-media/shared/dist/utils/http';
 
 export class FollowerController {
   constructor(private followerService: FollowerService) {}
@@ -21,18 +22,12 @@ export class FollowerController {
 
     try {
       if (!followerId) {
-        res.status(401).json({
-          error: 'Unauthorized',
-          message: 'User not authenticated',
-        });
+        fail(res, 401, 'UNAUTHORIZED', 'User not authenticated');
         return;
       }
 
       if (followerId === followingId) {
-        res.status(400).json({
-          error: 'Bad request',
-          message: 'Cannot follow yourself',
-        });
+        fail(res, 400, 'BAD_REQUEST', 'Cannot follow yourself');
         return;
       }
 
@@ -42,32 +37,20 @@ export class FollowerController {
 
       userMetrics.userFollowed.inc();
 
-      res.json({
-        success: true,
-        message: 'Successfully followed user',
-      });
+      ok(res, { followed: true }, 'Successfully followed user');
     } catch (error: any) {
       if (error.message === 'User not found') {
-        res.status(404).json({
-          error: 'User not found',
-          message: 'The user you are trying to follow does not exist',
-        });
+        fail(res, 404, 'NOT_FOUND', 'The user you are trying to follow does not exist');
         return;
       }
 
       if (error.message === 'Already following') {
-        res.status(400).json({
-          error: 'Bad request',
-          message: 'You are already following this user',
-        });
+        fail(res, 400, 'BAD_REQUEST', 'You are already following this user');
         return;
       }
 
       logger.error('Failed to follow user', { error, followerId, followingId });
-      res.status(500).json({
-        error: 'Internal server error',
-        message: 'Failed to follow user',
-      });
+      fail(res, 500, 'INTERNAL_ERROR', 'Failed to follow user');
     }
   }
 
@@ -81,9 +64,7 @@ export class FollowerController {
 
     try {
       if (!followerId) {
-        res.status(401).json({
-          error: 'Unauthorized',
-        });
+        fail(res, 401, 'UNAUTHORIZED', 'Unauthorized');
         return;
       }
 
@@ -93,23 +74,15 @@ export class FollowerController {
 
       userMetrics.userUnfollowed.inc();
 
-      res.json({
-        success: true,
-        message: 'Successfully unfollowed user',
-      });
+      ok(res, { unfollowed: true }, 'Successfully unfollowed user');
     } catch (error: any) {
       if (error.message === 'Not following') {
-        res.status(400).json({
-          error: 'Bad request',
-          message: 'You are not following this user',
-        });
+        fail(res, 400, 'BAD_REQUEST', 'You are not following this user');
         return;
       }
 
       logger.error('Failed to unfollow user', { error, followerId, followingId });
-      res.status(500).json({
-        error: 'Internal server error',
-      });
+      fail(res, 500, 'INTERNAL_ERROR', 'Internal server error');
     }
   }
 
@@ -129,9 +102,8 @@ export class FollowerController {
 
       const followers = await this.followerService.getFollowers(id, options);
 
-      res.json({
-        success: true,
-        data: followers,
+      ok(res, {
+        items: followers,
         pagination: {
           limit: options.limit,
           offset: options.offset,
@@ -140,9 +112,7 @@ export class FollowerController {
       });
     } catch (error) {
       logger.error('Failed to get followers', { error, userId: id });
-      res.status(500).json({
-        error: 'Internal server error',
-      });
+      fail(res, 500, 'INTERNAL_ERROR', 'Internal server error');
     }
   }
 
@@ -162,9 +132,8 @@ export class FollowerController {
 
       const following = await this.followerService.getFollowing(id, options);
 
-      res.json({
-        success: true,
-        data: following,
+      ok(res, {
+        items: following,
         pagination: {
           limit: options.limit,
           offset: options.offset,
@@ -173,9 +142,7 @@ export class FollowerController {
       });
     } catch (error) {
       logger.error('Failed to get following', { error, userId: id });
-      res.status(500).json({
-        error: 'Internal server error',
-      });
+      fail(res, 500, 'INTERNAL_ERROR', 'Internal server error');
     }
   }
 
@@ -189,17 +156,10 @@ export class FollowerController {
     try {
       const isFollowing = await this.followerService.isFollowing(followerId, followingId);
 
-      res.json({
-        success: true,
-        data: {
-          isFollowing,
-        },
-      });
+      ok(res, { isFollowing });
     } catch (error) {
       logger.error('Failed to check following status', { error });
-      res.status(500).json({
-        error: 'Internal server error',
-      });
+      fail(res, 500, 'INTERNAL_ERROR', 'Internal server error');
     }
   }
 
@@ -213,15 +173,10 @@ export class FollowerController {
     try {
       const stats = await this.followerService.getStats(id);
 
-      res.json({
-        success: true,
-        data: stats,
-      });
+      ok(res, stats);
     } catch (error) {
       logger.error('Failed to get follower stats', { error, userId: id });
-      res.status(500).json({
-        error: 'Internal server error',
-      });
+      fail(res, 500, 'INTERNAL_ERROR', 'Internal server error');
     }
   }
 }

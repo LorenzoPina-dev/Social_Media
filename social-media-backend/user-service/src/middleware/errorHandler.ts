@@ -5,6 +5,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
+import { fail } from '@social-media/shared/dist/utils/http';
 
 export class AppError extends Error {
   constructor(
@@ -31,21 +32,31 @@ export function errorHandler(
   });
 
   if (err instanceof AppError) {
-    res.status(err.statusCode).json({
-      error: err.message,
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
-    });
+    fail(
+      res,
+      err.statusCode,
+      'APP_ERROR',
+      err.message,
+      process.env.NODE_ENV === 'development' && err.stack
+        ? [{ field: 'stack', message: err.stack }]
+        : undefined,
+    );
     return;
   }
 
   // Default error
-  res.status(500).json({
-    error: 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && {
-      message: err.message,
-      stack: err.stack,
-    }),
-  });
+  fail(
+    res,
+    500,
+    'INTERNAL_ERROR',
+    'Internal server error',
+    process.env.NODE_ENV === 'development'
+      ? [
+          { field: 'message', message: err.message },
+          ...(err.stack ? [{ field: 'stack', message: err.stack }] : []),
+        ]
+      : undefined,
+  );
 }
 
 export default errorHandler;

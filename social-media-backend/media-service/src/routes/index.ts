@@ -10,6 +10,7 @@ import { ProcessingJobModel } from '../models/processingJob.model';
 import { MediaProducer } from '../kafka/producers/media.producer';
 import { PostEventConsumer } from '../kafka/consumers/post.consumer';
 import { logger } from '../utils/logger';
+import { fail } from '@social-media/shared/dist/utils/http';
 
 export function setupRoutes(app: Application): void {
   // Models
@@ -36,7 +37,7 @@ export function setupRoutes(app: Application): void {
 
   // 404
   app.use('*', (_, res) => {
-    res.status(404).json({ success: false, error: 'Route not found', code: 'NOT_FOUND' });
+    fail(res, 404, 'NOT_FOUND', 'Route not found');
   });
 
   logger.info('Media routes configured successfully');

@@ -22,6 +22,7 @@ import { PasswordResetModel } from '../models/passwordReset.model';
 import { AuthProducer } from '../kafka/producers/auth.producer';
 
 import { logger } from '../utils/logger';
+import { fail } from '@social-media/shared';
 /**
  * Setup all routes
  */
@@ -65,11 +66,7 @@ export function setupRoutes(app: Application): void {
 
   // 404 handler
   app.use('*', (_, res) => {
-    res.status(404).json({
-      success: false,
-      error: 'Route not found',
-      code: 'NOT_FOUND',
-    });
+    fail(res, 404, 'NOT_FOUND', 'Route not found');
   });
 
   logger.info('Routes configured successfully');

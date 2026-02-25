@@ -7,6 +7,7 @@ import { SearchService } from '../services/search.service';
 import { AutocompleteService } from '../services/autocomplete.service';
 import { TrendingService } from '../services/trending.service';
 import { logger } from '../utils/logger';
+import { ok } from '@social-media/shared/dist/utils/http';
 
 export class SearchController {
   constructor(
@@ -29,9 +30,8 @@ export class SearchController {
       verified: verified === 'true' ? true : undefined,
     });
 
-    res.json({
-      success: true,
-      data: result.hits,
+    ok(res, {
+      items: result.hits,
       meta: {
         total: result.total,
         took: result.took,
@@ -57,9 +57,8 @@ export class SearchController {
       to_date: to_date ?? undefined,
     });
 
-    res.json({
-      success: true,
-      data: result.hits,
+    ok(res, {
+      items: result.hits,
       meta: {
         total: result.total,
         took: result.took,
@@ -83,10 +82,14 @@ export class SearchController {
       offset ? parseInt(offset, 10) : undefined,
     );
 
-    res.json({
-      success: true,
-      data: result.hits,
-      meta: { total: result.total, took: result.took },
+    ok(res, {
+      items: result.hits,
+      meta: {
+        total: result.total,
+        took: result.took,
+        limit: parseInt(limit ?? '20', 10),
+        offset: parseInt(offset ?? '0', 10),
+      },
     });
   }
 
@@ -101,10 +104,7 @@ export class SearchController {
       limit ? parseInt(limit, 10) : 10,
     );
 
-    res.json({
-      success: true,
-      data: suggestions,
-    });
+    ok(res, suggestions);
   }
 
   // ── GET /search/trending/hashtags?limit=... ───────────────────────────────
@@ -116,9 +116,6 @@ export class SearchController {
       limit ? parseInt(limit, 10) : undefined,
     );
 
-    res.json({
-      success: true,
-      data: trending,
-    });
+    ok(res, trending);
   }
 }

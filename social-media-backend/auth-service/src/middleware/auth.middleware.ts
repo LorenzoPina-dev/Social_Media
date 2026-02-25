@@ -6,6 +6,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { logger } from '../utils/logger';
+import { fail } from '@social-media/shared';
 //import { config } from '../config';
 
 interface JWTPayload {
@@ -27,10 +28,7 @@ export function requireAuth(
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({
-        error: 'Unauthorized',
-        message: 'No token provided',
-      });
+      fail(res, 401, 'UNAUTHORIZED', 'No token provided');
       return;
     }
 
@@ -51,18 +49,12 @@ export function requireAuth(
       next();
     } catch (jwtError: any) {
       if (jwtError.name === 'TokenExpiredError') {
-        res.status(401).json({
-          error: 'Unauthorized',
-          message: 'Token expired',
-        });
+        fail(res, 401, 'UNAUTHORIZED', 'Token expired');
         return;
       }
 
       if (jwtError.name === 'JsonWebTokenError') {
-        res.status(401).json({
-          error: 'Unauthorized',
-          message: 'Invalid token',
-        });
+        fail(res, 401, 'UNAUTHORIZED', 'Invalid token');
         return;
       }
 
@@ -70,9 +62,7 @@ export function requireAuth(
     }
   } catch (error) {
     logger.error('Authentication error', { error });
-    res.status(500).json({
-      error: 'Internal server error',
-    });
+    fail(res, 500, 'INTERNAL_ERROR', 'Internal server error');
   }
 }
 

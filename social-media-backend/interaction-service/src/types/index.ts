@@ -3,6 +3,16 @@
  * Interaction Service
  */
 
+export type {
+  ApiEnvelope,
+  ApiFailure,
+  ApiSuccess,
+  CursorPage,
+  OffsetPage,
+  PostDto,
+  UserDto,
+} from '@social-media/shared/dist/types/contracts.types';
+
 // ============================================================================
 // LIKE TYPES
 // ============================================================================
@@ -237,3 +247,6 @@ declare global {
     }
   }
 }
+
+
+

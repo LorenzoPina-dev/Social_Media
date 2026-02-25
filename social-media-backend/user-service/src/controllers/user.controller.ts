@@ -7,6 +7,7 @@ import { Request, Response } from 'express';
 import { UserService } from '../services/user.service';
 import { logger } from '../utils/logger';
 import { userMetrics } from '../utils/metrics';
+import { fail, ok } from '@social-media/shared/dist/utils/http';
 
 export class UserController {
   constructor(private userService: UserService) {}
@@ -25,10 +26,7 @@ export class UserController {
       const user = await this.userService.findById(id);
 
       if (!user) {
-        res.status(404).json({
-          error: 'User not found',
-          message: `User with ID ${id} does not exist`,
-        });
+        fail(res, 404, 'NOT_FOUND', `User with ID ${id} does not exist`);
         return;
       }
 
@@ -41,10 +39,7 @@ export class UserController {
         (Date.now() - startTime) / 1000
       );
 
-      res.json({
-        success: true,
-        data: publicUser,
-      });
+      ok(res, publicUser);
     } catch (error) {
       logger.error('Failed to get user', { error, userId: id });
       userMetrics.requestDuration.observe(
@@ -52,10 +47,7 @@ export class UserController {
         (Date.now() - startTime) / 1000
       );
 
-      res.status(500).json({
-        error: 'Internal server error',
-        message: 'Failed to retrieve user',
-      });
+      fail(res, 500, 'INTERNAL_ERROR', 'Failed to retrieve user');
     }
   }
 
@@ -68,31 +60,21 @@ export class UserController {
       const userId = (req as any).user?.id;
 
       if (!userId) {
-        res.status(401).json({
-          error: 'Unauthorized',
-          message: 'User not authenticated',
-        });
+        fail(res, 401, 'UNAUTHORIZED', 'User not authenticated');
         return;
       }
 
       const user = await this.userService.findById(userId);
 
       if (!user) {
-        res.status(404).json({
-          error: 'User not found',
-        });
+        fail(res, 404, 'NOT_FOUND', 'User not found');
         return;
       }
 
-      res.json({
-        success: true,
-        data: user,
-      });
+      ok(res, user);
     } catch (error) {
       logger.error('Failed to get current user', { error });
-      res.status(500).json({
-        error: 'Internal server error',
-      });
+      fail(res, 500, 'INTERNAL_ERROR', 'Internal server error');
     }
   }
 
@@ -108,10 +90,7 @@ export class UserController {
     try {
       // Check authorization
       if (currentUserId !== id) {
-        res.status(403).json({
-          error: 'Forbidden',
-          message: 'You can only update your own profile',
-        });
+        fail(res, 403, 'FORBIDDEN', 'You can only update your own profile');
         return;
       }
 
@@ -121,17 +100,10 @@ export class UserController {
 
       userMetrics.userUpdated.inc();
 
-      res.json({
-        success: true,
-        data: user,
-        message: 'User profile updated successfully',
-      });
+      ok(res, user, 'User profile updated successfully');
     } catch (error) {
       logger.error('Failed to update user', { error, userId: id });
-      res.status(500).json({
-        error: 'Internal server error',
-        message: 'Failed to update user profile',
-      });
+      fail(res, 500, 'INTERNAL_ERROR', 'Failed to update user profile');
     }
   }
 
@@ -146,10 +118,7 @@ export class UserController {
     try {
       // Check authorization
       if (currentUserId !== id) {
-        res.status(403).json({
-          error: 'Forbidden',
-          message: 'You can only delete your own account',
-        });
+        fail(res, 403, 'FORBIDDEN', 'You can only delete your own account');
         return;
       }
 
@@ -159,20 +128,17 @@ export class UserController {
 
       userMetrics.userDeleted.inc();
 
-      res.json({
-        success: true,
-        message: 'User deletion initiated',
-        data: {
+      ok(
+        res,
+        {
           gracePeriodDays: 30,
           message: 'Your account will be permanently deleted in 30 days',
         },
-      });
+        'User deletion initiated',
+      );
     } catch (error) {
       logger.error('Failed to delete user', { error, userId: id });
-      res.status(500).json({
-        error: 'Internal server error',
-        message: 'Failed to delete user account',
-      });
+      fail(res, 500, 'INTERNAL_ERROR', 'Failed to delete user account');
     }
   }
 
@@ -185,10 +151,7 @@ export class UserController {
 
     try {
       if (!query || typeof query !== 'string') {
-        res.status(400).json({
-          error: 'Bad request',
-          message: 'Query parameter "q" is required',
-        });
+        fail(res, 400, 'BAD_REQUEST', 'Query parameter "q" is required');
         return;
       }
 
@@ -204,9 +167,8 @@ export class UserController {
 
       userMetrics.userSearched.inc();
 
-      res.json({
-        success: true,
-        data: users,
+      ok(res, {
+        items: users,
         pagination: {
           limit: options.limit,
           offset: options.offset,
@@ -215,10 +177,7 @@ export class UserController {
       });
     } catch (error) {
       logger.error('Failed to search users', { error, query });
-      res.status(500).json({
-        error: 'Internal server error',
-        message: 'Failed to search users',
-      });
+      fail(res, 500, 'INTERNAL_ERROR', 'Failed to search users');
     }
   }
 
@@ -231,32 +190,21 @@ export class UserController {
 
     try {
       if (!Array.isArray(ids) || ids.length === 0) {
-        res.status(400).json({
-          error: 'Bad request',
-          message: 'Array of user IDs is required',
-        });
+        fail(res, 400, 'BAD_REQUEST', 'Array of user IDs is required');
         return;
       }
 
       if (ids.length > 100) {
-        res.status(400).json({
-          error: 'Bad request',
-          message: 'Maximum 100 user IDs allowed',
-        });
+        fail(res, 400, 'BAD_REQUEST', 'Maximum 100 user IDs allowed');
         return;
       }
 
       const users = await this.userService.findByIds(ids);
 
-      res.json({
-        success: true,
-        data: users,
-      });
+      ok(res, users);
     } catch (error) {
       logger.error('Failed to get users by IDs', { error });
-      res.status(500).json({
-        error: 'Internal server error',
-      });
+      fail(res, 500, 'INTERNAL_ERROR', 'Internal server error');
     }
   }
 
@@ -272,16 +220,10 @@ export class UserController {
       const parsedLimit = limit ? parseInt(limit as string, 10) : 10;
       const users = await this.userService.getSuggestedUsers(parsedLimit, currentUserId);
 
-      res.json({
-        success: true,
-        data: users,
-      });
+      ok(res, users);
     } catch (error) {
       logger.error('Failed to get suggested users', { error });
-      res.status(500).json({
-        error: 'Internal server error',
-        message: 'Failed to load suggested users',
-      });
+      fail(res, 500, 'INTERNAL_ERROR', 'Failed to load suggested users');
     }
   }
 
@@ -295,24 +237,15 @@ export class UserController {
 
     try {
       if (currentUserId !== id) {
-        res.status(403).json({
-          error: 'Forbidden',
-          message: 'You can only read your own privacy settings',
-        });
+        fail(res, 403, 'FORBIDDEN', 'You can only read your own privacy settings');
         return;
       }
 
       const settings = await this.userService.getPrivacySettings(id);
-      res.json({
-        success: true,
-        data: settings,
-      });
+      ok(res, settings);
     } catch (error) {
       logger.error('Failed to get privacy settings', { error, userId: id });
-      res.status(500).json({
-        error: 'Internal server error',
-        message: 'Failed to get privacy settings',
-      });
+      fail(res, 500, 'INTERNAL_ERROR', 'Failed to get privacy settings');
     }
   }
 
@@ -326,24 +259,15 @@ export class UserController {
 
     try {
       if (currentUserId !== id) {
-        res.status(403).json({
-          error: 'Forbidden',
-          message: 'You can only update your own privacy settings',
-        });
+        fail(res, 403, 'FORBIDDEN', 'You can only update your own privacy settings');
         return;
       }
 
       const settings = await this.userService.updatePrivacySettings(id, req.body);
-      res.json({
-        success: true,
-        data: settings,
-      });
+      ok(res, settings);
     } catch (error) {
       logger.error('Failed to update privacy settings', { error, userId: id });
-      res.status(500).json({
-        error: 'Internal server error',
-        message: 'Failed to update privacy settings',
-      });
+      fail(res, 500, 'INTERNAL_ERROR', 'Failed to update privacy settings');
     }
   }
 }

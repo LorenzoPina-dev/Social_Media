@@ -7,6 +7,7 @@ import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 import { metrics } from '../utils/metrics';
 import { AuthError } from '../types';
+import { fail } from '@social-media/shared';
 
 /**
  * Error handler middleware
@@ -35,31 +36,21 @@ export function errorHandler(
 
   // Handle known error types
   if (error instanceof AuthError) {
-    res.status(error.statusCode).json({
-      success: false,
-      error: error.message,
-      code: error.code,
-    });
+    fail(res, error.statusCode, error.code, error.message);
     return;
   }
 
   // Handle Joi validation errors
   if (error.name === 'ValidationError') {
-    res.status(400).json({
-      success: false,
-      error: 'Validation failed',
-      code: 'VALIDATION_ERROR',
-      details: error.message,
-    });
+    fail(res, 400, 'VALIDATION_ERROR', 'Validation failed', [{ message: error.message }]);
     return;
   }
 
   // Handle unexpected errors
-  res.status(500).json({
-    success: false,
-    error: process.env.NODE_ENV === 'production' 
-      ? 'Internal server error' 
-      : error.message,
-    code: 'INTERNAL_ERROR',
-  });
+  fail(
+    res,
+    500,
+    'INTERNAL_ERROR',
+    process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message,
+  );
 }

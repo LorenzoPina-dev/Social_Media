@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { appealService } from '../services/appeal.service';
+import { created, ok } from '@social-media/shared/dist/utils/http';
 
 export class AppealController {
   async createAppeal(req: Request, res: Response): Promise<void> {
@@ -7,13 +8,13 @@ export class AppealController {
     const { case_id, reason } = req.body as { case_id: string; reason: string };
 
     const appeal = await appealService.createAppeal(userId, { case_id, reason });
-    res.status(201).json({ success: true, data: appeal });
+    created(res, appeal);
   }
 
   async getAppeal(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
     const appeal = await appealService.getAppeal(id);
-    res.json({ success: true, data: appeal });
+    ok(res, appeal);
   }
 
   async getMyAppeals(req: Request, res: Response): Promise<void> {
@@ -22,7 +23,7 @@ export class AppealController {
     const offset = Number(req.query.offset ?? 0);
 
     const appeals = await appealService.getAppealsByUser(userId, limit, offset);
-    res.json({ success: true, data: appeals });
+    ok(res, appeals);
   }
 
   async getPendingAppeals(req: Request, res: Response): Promise<void> {
@@ -30,7 +31,7 @@ export class AppealController {
     const offset = Number(req.query.offset ?? 0);
 
     const appeals = await appealService.getPendingAppeals(limit, offset);
-    res.json({ success: true, data: appeals });
+    ok(res, appeals);
   }
 
   async resolveAppeal(req: Request, res: Response): Promise<void> {
@@ -39,7 +40,7 @@ export class AppealController {
     const resolvedBy = req.user!.userId;
 
     const appeal = await appealService.resolveAppeal(id, { status }, resolvedBy);
-    res.json({ success: true, data: appeal });
+    ok(res, appeal);
   }
 }
 

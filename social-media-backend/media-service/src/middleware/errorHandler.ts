@@ -15,6 +15,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 import { AppError } from '../types';
+import { fail } from '@social-media/shared/dist/utils/http';
 
 // ─── Type guards ──────────────────────────────────────────────────────────────
 
@@ -69,39 +70,23 @@ export function errorHandler(
       });
     }
 
-    res.status(err.statusCode).json({
-      success: false,
-      error: err.message,
-      code: err.code,
-    });
+    fail(res, err.statusCode, err.code, err.message);
     return;
   }
 
   // ── Malformed JSON body ──────────────────────────────────────────────────────
   if (err instanceof SyntaxError && 'body' in err) {
-    res.status(400).json({
-      success: false,
-      error: 'Invalid JSON in request body',
-      code: 'INVALID_JSON',
-    });
+    fail(res, 400, 'INVALID_JSON', 'Invalid JSON in request body');
     return;
   }
 
   // ── JWT / jsonwebtoken errors ────────────────────────────────────────────────
   if (err?.name === 'JsonWebTokenError') {
-    res.status(401).json({
-      success: false,
-      error: 'Invalid token',
-      code: 'UNAUTHORIZED',
-    });
+    fail(res, 401, 'UNAUTHORIZED', 'Invalid token');
     return;
   }
   if (err?.name === 'TokenExpiredError') {
-    res.status(401).json({
-      success: false,
-      error: 'Token has expired',
-      code: 'UNAUTHORIZED',
-    });
+    fail(res, 401, 'UNAUTHORIZED', 'Token has expired');
     return;
   }
 
@@ -112,11 +97,7 @@ export function errorHandler(
       constraint: err.constraint,
       url: req.url,
     });
-    res.status(409).json({
-      success: false,
-      error: 'Resource already exists',
-      code: 'CONFLICT',
-    });
+    fail(res, 409, 'CONFLICT', 'Resource already exists');
     return;
   }
 
@@ -125,11 +106,7 @@ export function errorHandler(
       error: err.message,
       url: req.url,
     });
-    res.status(422).json({
-      success: false,
-      error: 'Referenced resource does not exist',
-      code: 'UNPROCESSABLE_ENTITY',
-    });
+    fail(res, 422, 'UNPROCESSABLE_ENTITY', 'Referenced resource does not exist');
     return;
   }
 
@@ -138,11 +115,7 @@ export function errorHandler(
       error: err.message,
       url: req.url,
     });
-    res.status(400).json({
-      success: false,
-      error: 'Missing required field',
-      code: 'VALIDATION_ERROR',
-    });
+    fail(res, 400, 'VALIDATION_ERROR', 'Missing required field');
     return;
   }
 
@@ -151,21 +124,13 @@ export function errorHandler(
       error: err.message,
       url: req.url,
     });
-    res.status(503).json({
-      success: false,
-      error: 'Database temporarily unavailable',
-      code: 'SERVICE_UNAVAILABLE',
-    });
+    fail(res, 503, 'SERVICE_UNAVAILABLE', 'Database temporarily unavailable');
     return;
   }
 
   // ── Payload too large (body-parser) ─────────────────────────────────────────
   if (err?.type === 'entity.too.large') {
-    res.status(413).json({
-      success: false,
-      error: 'Request body too large',
-      code: 'PAYLOAD_TOO_LARGE',
-    });
+    fail(res, 413, 'PAYLOAD_TOO_LARGE', 'Request body too large');
     return;
   }
 
@@ -178,12 +143,13 @@ export function errorHandler(
     userId: req.user?.userId,
   });
 
-  res.status(500).json({
-    success: false,
-    error: 'An unexpected error occurred. Please try again later.',
-    code: 'INTERNAL_ERROR',
-    ...(isDev && { details: err?.message }),
-  });
+  fail(
+    res,
+    500,
+    'INTERNAL_ERROR',
+    'An unexpected error occurred. Please try again later.',
+    isDev ? [{ message: String(err?.message ?? 'Unknown error') }] : undefined,
+  );
 }
 
 export { AppError };

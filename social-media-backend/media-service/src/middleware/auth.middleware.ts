@@ -2,12 +2,13 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
 import { logger } from '../utils/logger';
+import { fail } from '@social-media/shared/dist/utils/http';
 
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   try {
     const header = req.headers.authorization;
     if (!header?.startsWith('Bearer ')) {
-      res.status(401).json({ success: false, error: 'Missing token', code: 'UNAUTHORIZED' });
+      fail(res, 401, 'UNAUTHORIZED', 'Missing token');
       return;
     }
 
@@ -18,14 +19,14 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
       next();
     } catch (jwtErr: any) {
       if (jwtErr.name === 'TokenExpiredError') {
-        res.status(401).json({ success: false, error: 'Token expired', code: 'UNAUTHORIZED' });
+        fail(res, 401, 'UNAUTHORIZED', 'Token expired');
         return;
       }
-      res.status(401).json({ success: false, error: 'Invalid token', code: 'UNAUTHORIZED' });
+      fail(res, 401, 'UNAUTHORIZED', 'Invalid token');
     }
   } catch (error) {
     logger.error('Auth middleware error', { error });
-    res.status(500).json({ success: false, error: 'Internal server error', code: 'INTERNAL_ERROR' });
+    fail(res, 500, 'INTERNAL_ERROR', 'Internal server error');
   }
 }
 

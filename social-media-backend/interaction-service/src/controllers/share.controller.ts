@@ -4,6 +4,7 @@
 
 import { Request, Response } from 'express';
 import { ShareService } from '../services/share.service';
+import { created, ok } from '@social-media/shared/dist/utils/http';
 
 export class ShareController {
   constructor(private readonly shareService: ShareService) {}
@@ -22,10 +23,7 @@ export class ShareController {
       comment,
     });
 
-    res.status(201).json({
-      success: true,
-      data: { share, share_count: count },
-    });
+    created(res, { share, share_count: count });
   }
 
   /**
@@ -35,10 +33,7 @@ export class ShareController {
     const { postId } = req.params;
     const count = await this.shareService.getShareCount(postId);
 
-    res.status(200).json({
-      success: true,
-      data: { post_id: postId, share_count: count },
-    });
+    ok(res, { post_id: postId, share_count: count });
   }
 
   /**
@@ -55,9 +50,8 @@ export class ShareController {
       cursor
     );
 
-    res.status(200).json({
-      success: true,
-      data: shares,
+    ok(res, {
+      items: shares,
       pagination: { cursor: nextCursor, has_more: hasMore },
     });
   }

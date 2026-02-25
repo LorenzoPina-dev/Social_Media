@@ -29,6 +29,7 @@ import { MessageModel } from '../models/message.model';
 import { UserProducer } from '../kafka/producers/user.producer';
 
 import { logger } from '../utils/logger';
+import { fail } from '@social-media/shared/dist/utils/http';
 
 /**
  * Setup all routes
@@ -87,11 +88,7 @@ export function setupRoutes(app: Application): void {
 
   // 404 handler
   app.use('*', (_, res) => {
-    res.status(404).json({
-      success: false,
-      error: 'Route not found',
-      code: 'NOT_FOUND',
-    });
+    fail(res, 404, 'NOT_FOUND', 'Route not found');
   });
 
   logger.info('User routes configured successfully');

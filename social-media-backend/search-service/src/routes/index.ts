@@ -11,6 +11,7 @@ import { TrendingService } from '../services/trending.service';
 import { ElasticsearchService } from '../services/elasticsearch.service';
 import { IndexerService } from '../services/indexer.service';
 import { logger } from '../utils/logger';
+import { fail } from '@social-media/shared/dist/utils/http';
 
 // Esporto le istanze singleton per riuso (es. dai Kafka consumers)
 let indexerService: IndexerService | null = null;
@@ -40,7 +41,7 @@ export function setupRoutes(app: Application): void {
 
   // 404 catch-all
   app.use('*', (_req, res) => {
-    res.status(404).json({ success: false, error: 'Route not found', code: 'NOT_FOUND' });
+    fail(res, 404, 'NOT_FOUND', 'Route not found');
   });
 
   logger.info('Search routes configured');

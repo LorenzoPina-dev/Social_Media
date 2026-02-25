@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 import { metrics } from '../utils/metrics';
 import { NotificationError } from '../types';
+import { fail } from '@social-media/shared/dist/utils/http';
 
 export function errorHandler(err: Error, req: Request, res: Response, _: NextFunction): void {
   logger.error('Request error', {
@@ -18,18 +19,19 @@ export function errorHandler(err: Error, req: Request, res: Response, _: NextFun
   });
 
   if (err instanceof NotificationError) {
-    res.status(err.statusCode).json({ success: false, error: err.message, code: err.code });
+    fail(res, err.statusCode, err.code, err.message);
     return;
   }
 
   if (err.name === 'ValidationError') {
-    res.status(400).json({ success: false, error: 'Validation failed', code: 'VALIDATION_ERROR', details: err.message });
+    fail(res, 400, 'VALIDATION_ERROR', 'Validation failed', [{ message: err.message }]);
     return;
   }
 
-  res.status(500).json({
-    success: false,
-    error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
-    code: 'INTERNAL_ERROR',
-  });
+  fail(
+    res,
+    500,
+    'INTERNAL_ERROR',
+    process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
+  );
 }

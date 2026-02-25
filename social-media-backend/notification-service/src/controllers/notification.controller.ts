@@ -4,6 +4,7 @@
 
 import { Request, Response } from 'express';
 import { NotificationService } from '../services/notification.service';
+import { fail, ok } from '@social-media/shared/dist/utils/http';
 //import { logger } from '../utils/logger';
 
 export class NotificationController {
@@ -19,9 +20,8 @@ export class NotificationController {
 
     const result = await this.notificationService.getNotifications(userId, limit, cursor);
 
-    res.json({
-      success: true,
-      data: result.notifications,
+    ok(res, {
+      items: result.notifications,
       hasMore: result.hasMore,
       cursor: result.nextCursor,
     });
@@ -33,7 +33,7 @@ export class NotificationController {
   async unreadCount(req: Request, res: Response): Promise<void> {
     const userId = req.user!.userId;
     const count = await this.notificationService.getUnreadCount(userId);
-    res.json({ success: true, data: { count } });
+    ok(res, { count });
   }
 
   /**
@@ -45,10 +45,10 @@ export class NotificationController {
 
     const updated = await this.notificationService.markAsRead(id, userId);
     if (!updated) {
-      res.status(404).json({ success: false, error: 'Notification not found', code: 'NOT_FOUND' });
+      fail(res, 404, 'NOT_FOUND', 'Notification not found');
       return;
     }
-    res.json({ success: true });
+    ok(res, { updated: true });
   }
 
   /**
@@ -57,6 +57,6 @@ export class NotificationController {
   async markAllRead(req: Request, res: Response): Promise<void> {
     const userId = req.user!.userId;
     const count = await this.notificationService.markAllAsRead(userId);
-    res.json({ success: true, data: { markedCount: count } });
+    ok(res, { markedCount: count });
   }
 }

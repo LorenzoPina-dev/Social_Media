@@ -7,6 +7,7 @@ import { Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
 import { logger } from '../utils/logger';
 import { metrics } from '../utils/metrics';
+import { created, fail, ok } from '@social-media/shared';
 import {
   CreateUserDto,
   LoginDto,
@@ -34,12 +35,9 @@ export class AuthController {
       // Remove sensitive fields
       const sanitizedUser = this.sanitizeUser(result.user);
 
-      res.status(201).json({
-        success: true,
-        data: {
-          user: sanitizedUser,
-          tokens: result.tokens,
-        },
+      created(res, {
+        user: sanitizedUser,
+        tokens: result.tokens,
       });
 
       metrics.recordRequestDuration('register', Date.now() - startTime);
@@ -68,13 +66,10 @@ export class AuthController {
       // Remove sensitive fields
       const sanitizedUser = this.sanitizeUser(result.user);
 
-      res.json({
-        success: true,
-        data: {
-          user: sanitizedUser,
-          tokens: result.tokens,
-          mfa_required: result.mfa_required,
-        },
+      ok(res, {
+        user: sanitizedUser,
+        tokens: result.tokens,
+        mfa_required: result.mfa_required,
       });
 
       metrics.recordRequestDuration('login', Date.now() - startTime);
@@ -93,20 +88,13 @@ export class AuthController {
       const { refresh_token } = req.body;
 
       if (!refresh_token) {
-        res.status(400).json({
-          success: false,
-          error: 'Refresh token is required',
-          code: 'MISSING_REFRESH_TOKEN',
-        });
+        fail(res, 400, 'MISSING_REFRESH_TOKEN', 'Refresh token is required');
         return;
       }
 
       const tokens = await this.authService.refreshToken(refresh_token);
 
-      res.json({
-        success: true,
-        data: tokens,
-      });
+      ok(res, tokens);
     } catch (error) {
       logger.error('Token refresh failed', { error });
       throw error;
@@ -122,20 +110,13 @@ export class AuthController {
       const { refresh_token } = req.body;
 
       if (!refresh_token) {
-        res.status(400).json({
-          success: false,
-          error: 'Refresh token is required',
-          code: 'MISSING_REFRESH_TOKEN',
-        });
+        fail(res, 400, 'MISSING_REFRESH_TOKEN', 'Refresh token is required');
         return;
       }
 
       await this.authService.logout(refresh_token);
 
-      res.json({
-        success: true,
-        message: 'Logged out successfully',
-      });
+      ok(res, { logged_out: true }, 'Logged out successfully');
     } catch (error) {
       logger.error('Logout failed', { error });
       throw error;
@@ -152,20 +133,13 @@ export class AuthController {
       const userId = req.user?.id;
 
       if (!userId) {
-        res.status(401).json({
-          success: false,
-          error: 'Unauthorized',
-          code: 'UNAUTHORIZED',
-        });
+        fail(res, 401, 'UNAUTHORIZED', 'Unauthorized');
         return;
       }
 
       await this.authService.logoutAll(userId);
 
-      res.json({
-        success: true,
-        message: 'Logged out from all devices successfully',
-      });
+      ok(res, { logged_out_all: true }, 'Logged out from all devices successfully');
     } catch (error) {
       logger.error('Logout all failed', { error });
       throw error;
@@ -181,10 +155,7 @@ export class AuthController {
       const data: RequestPasswordResetDto = req.body;
       await this.authService.requestPasswordReset(data);
 
-      res.json({
-        success: true,
-        message: 'If this email exists, password reset instructions have been sent',
-      });
+      ok(res, { requested: true }, 'If this email exists, password reset instructions have been sent');
     } catch (error) {
       logger.error('Forgot password failed', { error });
       throw error;
@@ -200,10 +171,7 @@ export class AuthController {
       const data: ResetPasswordDto = req.body;
       await this.authService.resetPassword(data);
 
-      res.json({
-        success: true,
-        message: 'Password reset successfully',
-      });
+      ok(res, { reset: true }, 'Password reset successfully');
     } catch (error) {
       logger.error('Reset password failed', { error });
       throw error;

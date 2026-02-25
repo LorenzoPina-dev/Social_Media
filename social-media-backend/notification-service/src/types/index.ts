@@ -2,6 +2,16 @@
  * TypeScript Type Definitions — Notification Service
  */
 
+export type {
+  ApiEnvelope,
+  ApiFailure,
+  ApiSuccess,
+  CursorPage,
+  OffsetPage,
+  NotificationDto,
+  UserDto,
+} from '@social-media/shared/dist/types/contracts.types';
+
 // ============================================================================
 // DB ENTITIES
 // ============================================================================
@@ -222,3 +232,7 @@ export class NotFoundError extends NotificationError {
 export class TooManyRequestsError extends NotificationError {
   constructor() { super('TOO_MANY_REQUESTS', 'Rate limit exceeded', 429); }
 }
+
+
+
+

@@ -8,6 +8,7 @@ import { MFAService } from '../services/mfa.service';
 import { logger } from '../utils/logger';
 import { metrics } from '../utils/metrics';
 import { VerifyMFADto } from '../types';
+import { fail, ok } from '@social-media/shared';
 
 export class MFAController {
   constructor(private mfaService: MFAService) {}
@@ -24,11 +25,7 @@ export class MFAController {
       const userId = req.user?.id;
 
       if (!userId) {
-        res.status(401).json({
-          success: false,
-          error: 'Unauthorized',
-          code: 'UNAUTHORIZED',
-        });
+        fail(res, 401, 'UNAUTHORIZED', 'Unauthorized');
         return;
       }
 
@@ -36,15 +33,15 @@ export class MFAController {
 
       const result = await this.mfaService.setupMFA(userId);
 
-      res.json({
-        success: true,
-        data: {
+      ok(
+        res,
+        {
           secret: result.secret,
           qr_code: result.qr_code,
           backup_codes: result.backup_codes,
         },
-        message: 'MFA setup initiated. Please scan QR code and verify with code.',
-      });
+        'MFA setup initiated. Please scan QR code and verify with code.',
+      );
 
       metrics.recordRequestDuration('mfa_setup', Date.now() - startTime);
     } catch (error) {
@@ -63,11 +60,7 @@ export class MFAController {
       const userId = req.user?.id;
 
       if (!userId) {
-        res.status(401).json({
-          success: false,
-          error: 'Unauthorized',
-          code: 'UNAUTHORIZED',
-        });
+        fail(res, 401, 'UNAUTHORIZED', 'Unauthorized');
         return;
       }
 
@@ -77,14 +70,14 @@ export class MFAController {
 
       const result = await this.mfaService.verifyAndEnableMFA(userId, data);
 
-      res.json({
-        success: true,
-        data: {
+      ok(
+        res,
+        {
           enabled: true,
           backup_codes: result.backup_codes,
         },
-        message: 'MFA enabled successfully. Save your backup codes in a safe place.',
-      });
+        'MFA enabled successfully. Save your backup codes in a safe place.',
+      );
     } catch (error) {
       logger.error('MFA verification failed', { error });
       throw error;
@@ -101,22 +94,14 @@ export class MFAController {
       const userId = req.user?.id;
 
       if (!userId) {
-        res.status(401).json({
-          success: false,
-          error: 'Unauthorized',
-          code: 'UNAUTHORIZED',
-        });
+        fail(res, 401, 'UNAUTHORIZED', 'Unauthorized');
         return;
       }
 
       const { code } = req.body;
 
       if (!code) {
-        res.status(400).json({
-          success: false,
-          error: 'MFA code is required',
-          code: 'MISSING_MFA_CODE',
-        });
+        fail(res, 400, 'MISSING_MFA_CODE', 'MFA code is required');
         return;
       }
 
@@ -124,10 +109,7 @@ export class MFAController {
 
       await this.mfaService.disableMFA(userId, code);
 
-      res.json({
-        success: true,
-        message: 'MFA disabled successfully',
-      });
+      ok(res, { enabled: false }, 'MFA disabled successfully');
     } catch (error) {
       logger.error('MFA disable failed', { error });
       throw error;
@@ -144,22 +126,14 @@ export class MFAController {
       const userId = req.user?.id;
 
       if (!userId) {
-        res.status(401).json({
-          success: false,
-          error: 'Unauthorized',
-          code: 'UNAUTHORIZED',
-        });
+        fail(res, 401, 'UNAUTHORIZED', 'Unauthorized');
         return;
       }
 
       const { code } = req.body;
 
       if (!code) {
-        res.status(400).json({
-          success: false,
-          error: 'MFA code is required',
-          code: 'MISSING_MFA_CODE',
-        });
+        fail(res, 400, 'MISSING_MFA_CODE', 'MFA code is required');
         return;
       }
 
@@ -167,13 +141,13 @@ export class MFAController {
 
       const backupCodes = await this.mfaService.regenerateBackupCodes(userId, code);
 
-      res.json({
-        success: true,
-        data: {
+      ok(
+        res,
+        {
           backup_codes: backupCodes,
         },
-        message: 'Backup codes regenerated successfully. Save them in a safe place.',
-      });
+        'Backup codes regenerated successfully. Save them in a safe place.',
+      );
     } catch (error) {
       logger.error('Backup codes regeneration failed', { error });
       throw error;
@@ -190,20 +164,13 @@ export class MFAController {
       const userId = req.user?.id;
 
       if (!userId) {
-        res.status(401).json({
-          success: false,
-          error: 'Unauthorized',
-          code: 'UNAUTHORIZED',
-        });
+        fail(res, 401, 'UNAUTHORIZED', 'Unauthorized');
         return;
       }
 
       const status = await this.mfaService.getMFAStatus(userId);
 
-      res.json({
-        success: true,
-        data: status,
-      });
+      ok(res, status);
     } catch (error) {
       logger.error('Get MFA status failed', { error });
       throw error;

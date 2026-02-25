@@ -3,6 +3,7 @@ import { feedService } from '../services/feed.service';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 import { UnauthorizedError } from '../types';
+import { ok } from '@social-media/shared/dist/utils/http';
 
 export class FeedController {
   /**
@@ -27,14 +28,11 @@ export class FeedController {
 
       logger.info('Feed fetched', { userId, count: items.length, hasMore });
 
-      res.status(200).json({
-        success: true,
-        data: {
-          items,
-          nextCursor,
-          hasMore,
-          total: items.length,
-        },
+      ok(res, {
+        items,
+        nextCursor,
+        hasMore,
+        total: items.length,
       });
     } catch (err) {
       next(err);
@@ -51,7 +49,7 @@ export class FeedController {
 
       await feedService.clearFeed(req.user.id);
 
-      res.status(200).json({ success: true, data: { message: 'Feed cleared' } });
+      ok(res, { message: 'Feed cleared' });
     } catch (err) {
       next(err);
     }
@@ -67,7 +65,7 @@ export class FeedController {
 
       const size = await feedService.getFeedSize(req.user.id);
 
-      res.status(200).json({ success: true, data: { size } });
+      ok(res, { size });
     } catch (err) {
       next(err);
     }

@@ -18,6 +18,7 @@ import { setupLikeRoutes } from './like.routes';
 import { setupCommentRoutes } from './comment.routes';
 import { setupShareRoutes } from './share.routes';
 import { logger } from '../utils/logger';
+import { fail } from '@social-media/shared/dist/utils/http';
 
 export function setupRoutes(app: Application): void {
   // Models
@@ -46,7 +47,7 @@ export function setupRoutes(app: Application): void {
 
   // 404
   app.use('*', (_, res) => {
-    res.status(404).json({ success: false, error: 'Route not found', code: 'NOT_FOUND' });
+    fail(res, 404, 'NOT_FOUND', 'Route not found');
   });
 
   logger.info('Routes configured successfully');

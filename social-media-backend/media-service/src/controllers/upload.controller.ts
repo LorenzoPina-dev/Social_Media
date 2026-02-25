@@ -10,7 +10,7 @@
 
 import { Request, Response } from 'express';
 import { UploadService } from '../services/upload.service';
-import { logger } from '../utils/logger';
+import { created, ok } from '@social-media/shared/dist/utils/http';
 
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
@@ -22,10 +22,7 @@ export class UploadController {
   async requestPresignedUpload(req: Request, res: Response): Promise<void> {
     const userId = req.user!.userId;
     const result = await this.uploadService.requestPresignedUpload(userId, req.body);
-    res.status(201).json({
-      success: true,
-      data: result,
-    });
+    created(res, result);
   }
 
   /**
@@ -35,10 +32,7 @@ export class UploadController {
     const userId = req.user!.userId;
     const { mediaId } = req.params;
     const media = await this.uploadService.confirmUpload(mediaId, userId);
-    res.status(200).json({
-      success: true,
-      data: media,
-    });
+    ok(res, media);
   }
 
   /**
@@ -48,10 +42,7 @@ export class UploadController {
     const userId = req.user!.userId;
     const { mediaId } = req.params;
     const media = await this.uploadService.getMediaStatus(mediaId, userId);
-    res.status(200).json({
-      success: true,
-      data: media,
-    });
+    ok(res, media);
   }
 
   /**
@@ -61,7 +52,7 @@ export class UploadController {
     const userId = req.user!.userId;
     const { mediaId } = req.params;
     await this.uploadService.deleteMedia(mediaId, userId);
-    res.status(200).json({ success: true, message: 'Media deleted' });
+    ok(res, { deleted: true }, 'Media deleted');
   }
 
   /**
@@ -73,9 +64,8 @@ export class UploadController {
     const limit = parseInt(String(req.query.limit ?? 20), 10);
     const offset = parseInt(String(req.query.offset ?? 0), 10);
     const files = await this.uploadService.listUserMedia(userId, limit, offset);
-    res.status(200).json({
-      success: true,
-      data: files,
+    ok(res, {
+      items: files,
       pagination: { limit, offset, count: files.length },
     });
   }
