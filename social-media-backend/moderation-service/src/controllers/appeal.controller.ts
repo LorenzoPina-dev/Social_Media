@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { appealService } from '../services/appeal.service';
-import { created, ok } from '@social-media/shared/dist/utils/http';
+import { created, ok } from '@social-media/shared';
 
 export class AppealController {
   async createAppeal(req: Request, res: Response): Promise<void> {

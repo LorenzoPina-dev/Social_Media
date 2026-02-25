@@ -4,7 +4,7 @@
 
 import { Request, Response } from 'express';
 import { NotificationService } from '../services/notification.service';
-import { fail, ok } from '@social-media/shared/dist/utils/http';
+import { fail, ok } from '@social-media/shared';
 //import { logger } from '../utils/logger';
 
 export class NotificationController {

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 import { FeedError } from '../types';
-import { fail } from '@social-media/shared/dist/utils/http';
+import { fail } from '@social-media/shared';
 
 export function errorHandler(
   error: Error,

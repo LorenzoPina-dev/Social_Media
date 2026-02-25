@@ -1,7 +1,7 @@
 import rateLimit from 'express-rate-limit';
 import { config } from '../config';
 import { logger } from '../utils/logger';
-import { fail } from '@social-media/shared/dist/utils/http';
+import { fail } from '@social-media/shared';
 
 export const apiLimiter = rateLimit({
   windowMs: config.RATE_LIMIT.WINDOW_MS,

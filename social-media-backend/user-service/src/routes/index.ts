@@ -29,7 +29,7 @@ import { MessageModel } from '../models/message.model';
 import { UserProducer } from '../kafka/producers/user.producer';
 
 import { logger } from '../utils/logger';
-import { fail } from '@social-media/shared/dist/utils/http';
+import { fail } from '@social-media/shared';
 
 /**
  * Setup all routes

@@ -1,5 +1,10 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@social-media/shared": ["../shared/dist", "../shared/src"],
+      "@social-media/shared/*": ["../shared/dist/*", "../shared/src/*"]
+    },
     "target": "ES2022",
     "module": "commonjs",
     "lib": ["ES2022"],

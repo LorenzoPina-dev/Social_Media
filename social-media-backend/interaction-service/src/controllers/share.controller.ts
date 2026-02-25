@@ -4,7 +4,7 @@
 
 import { Request, Response } from 'express';
 import { ShareService } from '../services/share.service';
-import { created, ok } from '@social-media/shared/dist/utils/http';
+import { created, ok } from '@social-media/shared';
 
 export class ShareController {
   constructor(private readonly shareService: ShareService) {}

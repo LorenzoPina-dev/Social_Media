@@ -15,7 +15,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 import { AppError } from '../types';
-import { fail } from '@social-media/shared/dist/utils/http';
+import { fail } from '@social-media/shared';
 
 // ─── Type guards ──────────────────────────────────────────────────────────────
 

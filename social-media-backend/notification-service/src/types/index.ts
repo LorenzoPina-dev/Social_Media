@@ -10,7 +10,7 @@ export type {
   OffsetPage,
   NotificationDto,
   UserDto,
-} from '@social-media/shared/dist/types/contracts.types';
+} from '@social-media/shared';
 
 // ============================================================================
 // DB ENTITIES

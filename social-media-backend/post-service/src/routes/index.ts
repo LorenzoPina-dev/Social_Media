@@ -21,7 +21,7 @@ import { SavedPostModel } from '../models/savedPost.model';
 
 import { PostProducer } from '../kafka/producers/post.producer';
 import { logger } from '../utils/logger';
-import { fail } from '@social-media/shared/dist/utils/http';
+import { fail } from '@social-media/shared';
 
 // ─── Shared instances (singleton per processo) ────────────────────────────────
 

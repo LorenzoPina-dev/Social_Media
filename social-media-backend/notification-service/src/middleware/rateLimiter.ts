@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { getRedisClient } from '../config/redis';
 import { logger } from '../utils/logger';
 import { config } from '../config';
-import { fail } from '@social-media/shared/dist/utils/http';
+import { fail } from '@social-media/shared';
 
 interface RateLimiterOptions {
   windowMs?: number;

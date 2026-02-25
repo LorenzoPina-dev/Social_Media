@@ -4,7 +4,7 @@
 
 import { Request, Response } from 'express';
 import { LikeService } from '../services/like.service';
-import { created, ok } from '@social-media/shared/dist/utils/http';
+import { created, ok } from '@social-media/shared';
 
 export class LikeController {
   constructor(private readonly likeService: LikeService) {}

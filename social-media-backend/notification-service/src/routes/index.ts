@@ -12,7 +12,7 @@ import { setupNotificationRoutes } from './notification.routes';
 import { setupPreferencesRoutes } from './preferences.routes';
 import { setupDeviceTokenRoutes } from './deviceToken.routes';
 import { logger } from '../utils/logger';
-import { fail } from '@social-media/shared/dist/utils/http';
+import { fail } from '@social-media/shared';
 
 export function setupRoutes(app: Application): void {
   // Models

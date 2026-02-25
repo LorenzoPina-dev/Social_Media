@@ -4,7 +4,7 @@
 
 import { Request, Response } from 'express';
 import { PreferencesService } from '../services/preferences.service';
-import { ok } from '@social-media/shared/dist/utils/http';
+import { ok } from '@social-media/shared';
 
 export class PreferencesController {
   constructor(private readonly preferencesService: PreferencesService) {}

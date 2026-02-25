@@ -11,7 +11,7 @@ export type {
   OffsetPage,
   PostDto,
   UserDto,
-} from '@social-media/shared/dist/types/contracts.types';
+} from '@social-media/shared';
 
 // ============================================================================
 // LIKE TYPES
@@ -241,8 +241,10 @@ declare global {
     interface Request {
       user?: {
         id: string;
+        username: string;
         email: string;
-        username?: string;
+        verified: boolean;
+        mfa_enabled: boolean;
       };
     }
   }

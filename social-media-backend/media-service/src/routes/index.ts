@@ -10,7 +10,7 @@ import { ProcessingJobModel } from '../models/processingJob.model';
 import { MediaProducer } from '../kafka/producers/media.producer';
 import { PostEventConsumer } from '../kafka/consumers/post.consumer';
 import { logger } from '../utils/logger';
-import { fail } from '@social-media/shared/dist/utils/http';
+import { fail } from '@social-media/shared';
 
 export function setupRoutes(app: Application): void {
   // Models

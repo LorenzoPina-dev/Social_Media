@@ -6,7 +6,7 @@
 import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 import { logger } from '../utils/logger';
-import { fail } from '@social-media/shared/dist/utils/http';
+import { fail } from '@social-media/shared';
 
 /**
  * Validate request body against Joi schema

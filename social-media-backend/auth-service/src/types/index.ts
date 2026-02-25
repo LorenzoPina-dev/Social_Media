@@ -11,7 +11,7 @@ export type {
   UserDto,
   TokenPairDto,
   LoginResultDto,
-} from '@social-media/shared/dist/types/contracts.types';
+} from '@social-media/shared';
 
 // ============================================================================
 // USER TYPES
@@ -162,7 +162,7 @@ export interface OAuthAccount {
   created_at: Date;
 }
 
-// Canonical API envelopes are exported from @social-media/shared/dist/types/contracts.types.
+// Canonical API envelopes are exported from @social-media/shared.
 
 // ============================================================================
 // EVENT TYPES (for Kafka)

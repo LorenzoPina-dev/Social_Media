@@ -5,7 +5,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 import { AppError } from '../types';
-import { fail } from '@social-media/shared/dist/utils/http';
+import { fail } from '@social-media/shared';
 
 export function errorHandler(err: Error, req: Request, res: Response, _: NextFunction): void {
   logger.error('Error occurred', {

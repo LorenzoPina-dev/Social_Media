@@ -10,7 +10,7 @@ export type {
   OffsetPage,
   PostDto,
   UserDto,
-} from '@social-media/shared/dist/types/contracts.types';
+} from '@social-media/shared';
 
 // ─── DB Entities ───────────────────────────────────────────────────────────────
 

@@ -4,7 +4,7 @@
 
 import { Request, Response } from 'express';
 import { DeviceTokenService } from '../services/deviceToken.service';
-import { created, fail, ok } from '@social-media/shared/dist/utils/http';
+import { created, fail, ok } from '@social-media/shared';
 
 export class DeviceTokenController {
   constructor(private readonly deviceTokenService: DeviceTokenService) {}

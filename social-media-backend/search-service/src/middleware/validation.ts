@@ -5,7 +5,7 @@
 import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 import { logger } from '../utils/logger';
-import { fail } from '@social-media/shared/dist/utils/http';
+import { fail } from '@social-media/shared';
 
 export function validateQuery(schema: Joi.Schema) {
   return (req: Request, res: Response, next: NextFunction): void => {

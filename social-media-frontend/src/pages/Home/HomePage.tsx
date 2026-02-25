@@ -16,7 +16,16 @@ const HomePage = () => {
   const isMobile = useIsMobile();
 
   const handleCreatePost = () => {
-    openModal('create-post', <CreatePostModal isOpen={true} onClose={() => {}} />);
+    openModal(
+      'create-post',
+      <CreatePostModal
+        isOpen={true}
+        onClose={() => {}}
+        onSuccess={() => {
+          window.dispatchEvent(new CustomEvent('feed:refresh'));
+        }}
+      />
+    );
   };
 
   /*if (!isAuthenticated) {

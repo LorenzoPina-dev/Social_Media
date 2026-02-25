@@ -3,7 +3,7 @@ import { feedService } from '../services/feed.service';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 import { UnauthorizedError } from '../types';
-import { ok } from '@social-media/shared/dist/utils/http';
+import { ok } from '@social-media/shared';
 
 export class FeedController {
   /**

@@ -3,9 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useModal } from '@/contexts/ModalContext';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { SearchBar } from '@/components/search/SearchBar';
 import { Avatar } from '@/components/common/Avatar/Avatar';
+import { CreatePostModal } from '@/components/post/CreatePost/CreatePostModal';
 import styles from './Navbar.module.css';
 
 export const Navbar = () => {
@@ -14,6 +16,20 @@ export const Navbar = () => {
   const { unreadCount } = useNotifications();
   const [showMenu, setShowMenu] = useState(false);
   const navigate = useNavigate();
+  const { openModal } = useModal();
+
+  const handleCreatePost = () => {
+    openModal(
+      'create-post',
+      <CreatePostModal
+        isOpen={true}
+        onClose={() => {}}
+        onSuccess={() => {
+          window.dispatchEvent(new CustomEvent('feed:refresh'));
+        }}
+      />
+    );
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -54,6 +70,17 @@ export const Navbar = () => {
               <div className={styles.navItem}>
                 <NotificationBell count={unreadCount} />
               </div>
+
+              <button
+                className={styles.createButton}
+                onClick={handleCreatePost}
+                aria-label="Crea nuovo post"
+                title="Crea post"
+              >
+                <svg viewBox="0 0 24 24">
+                  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                </svg>
+              </button>
 
               <Link to="/messages" className={styles.navItem}>
                 <svg viewBox="0 0 24 24">

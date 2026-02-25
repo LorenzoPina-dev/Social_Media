@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { reviewService } from '../services/review.service';
 import { CaseStatus } from '../types';
-import { ok } from '@social-media/shared/dist/utils/http';
+import { ok } from '@social-media/shared';
 
 export class ReviewController {
   async getQueue(req: Request, res: Response): Promise<void> {

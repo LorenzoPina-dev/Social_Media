@@ -4,7 +4,7 @@
 
 import { Request, Response } from 'express';
 import { CommentService } from '../services/comment.service';
-import { created, noContent, ok } from '@social-media/shared/dist/utils/http';
+import { created, noContent, ok } from '@social-media/shared';
 
 export class CommentController {
   constructor(private readonly commentService: CommentService) {}

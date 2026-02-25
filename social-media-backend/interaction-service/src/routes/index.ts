@@ -18,7 +18,7 @@ import { setupLikeRoutes } from './like.routes';
 import { setupCommentRoutes } from './comment.routes';
 import { setupShareRoutes } from './share.routes';
 import { logger } from '../utils/logger';
-import { fail } from '@social-media/shared/dist/utils/http';
+import { fail } from '@social-media/shared';
 
 export function setupRoutes(app: Application): void {
   // Models

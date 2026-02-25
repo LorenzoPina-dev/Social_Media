@@ -7,7 +7,7 @@ import { SearchService } from '../services/search.service';
 import { AutocompleteService } from '../services/autocomplete.service';
 import { TrendingService } from '../services/trending.service';
 import { logger } from '../utils/logger';
-import { ok } from '@social-media/shared/dist/utils/http';
+import { ok } from '@social-media/shared';
 
 export class SearchController {
   constructor(

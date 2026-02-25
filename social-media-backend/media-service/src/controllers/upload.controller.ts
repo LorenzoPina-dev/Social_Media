@@ -10,7 +10,7 @@
 
 import { Request, Response } from 'express';
 import { UploadService } from '../services/upload.service';
-import { created, ok } from '@social-media/shared/dist/utils/http';
+import { created, ok } from '@social-media/shared';
 
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}

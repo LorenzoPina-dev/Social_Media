@@ -10,7 +10,7 @@ export type {
   CursorPage,
   OffsetPage,
   UserDto,
-} from '@social-media/shared/dist/types/contracts.types';
+} from '@social-media/shared';
 
 export interface User {
   id: string;

@@ -7,7 +7,7 @@ import { Request, Response } from 'express';
 import { UserService } from '../services/user.service';
 import { logger } from '../utils/logger';
 import { userMetrics } from '../utils/metrics';
-import { fail, ok } from '@social-media/shared/dist/utils/http';
+import { fail, ok } from '@social-media/shared';
 
 export class UserController {
   constructor(private userService: UserService) {}

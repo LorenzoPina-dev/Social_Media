@@ -1,6 +1,6 @@
 import rateLimit from 'express-rate-limit';
 import { Request, Response } from 'express';
-import { fail } from '@social-media/shared/dist/utils/http';
+import { fail } from '@social-media/shared';
 
 export const apiRateLimiter = rateLimit({
   windowMs: 60 * 1000,

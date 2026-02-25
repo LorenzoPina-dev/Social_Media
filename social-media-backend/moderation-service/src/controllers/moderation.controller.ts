@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { moderationService } from '../services/moderation.service';
 import { EntityType, CaseStatus } from '../types';
-import { created, ok } from '@social-media/shared/dist/utils/http';
+import { created, ok } from '@social-media/shared';
 
 export class ModerationController {
   async reportContent(req: Request, res: Response): Promise<void> {

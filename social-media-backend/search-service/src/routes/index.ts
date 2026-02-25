@@ -11,7 +11,7 @@ import { TrendingService } from '../services/trending.service';
 import { ElasticsearchService } from '../services/elasticsearch.service';
 import { IndexerService } from '../services/indexer.service';
 import { logger } from '../utils/logger';
-import { fail } from '@social-media/shared/dist/utils/http';
+import { fail } from '@social-media/shared';
 
 // Esporto le istanze singleton per riuso (es. dai Kafka consumers)
 let indexerService: IndexerService | null = null;

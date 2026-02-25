@@ -7,7 +7,7 @@ import { Request, Response } from 'express';
 import { FollowerService } from '../services/follower.service';
 import { logger } from '../utils/logger';
 import { userMetrics } from '../utils/metrics';
-import { fail, ok } from '@social-media/shared/dist/utils/http';
+import { fail, ok } from '@social-media/shared';
 
 export class FollowerController {
   constructor(private followerService: FollowerService) {}

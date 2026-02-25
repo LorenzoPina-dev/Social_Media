@@ -8,7 +8,7 @@ import RedisStore from 'rate-limit-redis';
 import { getRedisClient } from '../config/redis';
 import { config } from '../config';
 import { logger } from '../utils/logger';
-import { fail } from '@social-media/shared/dist/utils/http';
+import { fail } from '@social-media/shared';
 
 /**
  * General API rate limiter

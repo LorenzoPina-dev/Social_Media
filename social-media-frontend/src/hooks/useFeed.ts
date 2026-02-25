@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { getFeed } from '@/api/feed';
 import { FeedPost } from '@/types/feed.types';
 import { useInfiniteScroll } from './useInfiniteScroll';
@@ -77,6 +77,18 @@ export const useFeed = (initialParams?: any) => {
   const addPost = useCallback((newPost: FeedPost) => {
     setPosts(prev => [newPost, ...prev]);
   }, []);
+
+  // Ascolta l'evento globale emesso quando viene creato un nuovo post
+  useEffect(() => {
+    const handleFeedRefresh = () => {
+      setCursor(null);
+      setHasMore(true);
+      loadPosts(true);
+    };
+
+    window.addEventListener('feed:refresh', handleFeedRefresh);
+    return () => window.removeEventListener('feed:refresh', handleFeedRefresh);
+  }, [loadPosts]);
 
   return {
     posts,
