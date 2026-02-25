@@ -180,22 +180,7 @@ export class ServiceUnavailableError extends AppError {
 
 // ─── Express augmentation ──────────────────────────────────────────────────────
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        userId: string;
-        username: string;
-        email: string;
-        verified: boolean;
-        mfa_enabled: boolean;
-        jti: string;
-        iat: number;
-        exp: number;
-      };
-    }
-  }
-}
+// `Express.Request.user` is augmented centrally in @social-media/shared.
 
 
 

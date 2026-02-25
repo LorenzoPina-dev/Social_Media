@@ -94,20 +94,7 @@ export interface CounterResult {
 // RESPONSE TYPES
 // ============================================================================
 
-export interface ApiResponse<T = unknown> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  code?: string;
-}
-
-export interface PaginatedResponse<T> extends ApiResponse<T[]> {
-  pagination: {
-    cursor?: string;
-    has_more: boolean;
-    total?: number;
-  };
-}
+export type { ApiResponse, PaginatedResponse } from '@social-media/shared';
 
 // ============================================================================
 // KAFKA EVENT TYPES
@@ -236,19 +223,7 @@ export class TooManyRequestsError extends InteractionError {
 // REQUEST EXTENSIONS
 // ============================================================================
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        username: string;
-        email: string;
-        verified: boolean;
-        mfa_enabled: boolean;
-      };
-    }
-  }
-}
+// `Express.Request.user` is augmented centrally in @social-media/shared.
 
 
 

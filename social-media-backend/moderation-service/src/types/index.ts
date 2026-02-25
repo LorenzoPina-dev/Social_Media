@@ -196,25 +196,7 @@ export interface PostCreatedEvent extends KafkaBaseEvent {
 // JWT TokenPayload
 // ────────────────────────────────────────────────────────────
 
-export interface TokenPayload {
-  userId: string;
-  username: string;
-  email: string;
-  verified: boolean;
-  mfa_enabled: boolean;
-  jti: string;
-  iat: number;
-  exp: number;
-}
-
-// Extend Express Request
-declare global {
-  namespace Express {
-    interface Request {
-      user?: TokenPayload;
-    }
-  }
-}
+// JWT auth types and `req.user` augmentation come from @social-media/shared.
 
 
 

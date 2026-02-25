@@ -75,24 +75,12 @@ export interface CreateSessionDto {
 // TOKEN TYPES
 // ============================================================================
 
-export interface TokenPayload {
-  userId: string;
-  username: string;
-  email: string;
-  verified: boolean;
-  mfa_enabled: boolean;
-}
+export type { TokenPayload, DecodedToken } from '@social-media/shared';
 
 export interface TokenPair {
   access_token: string;
   refresh_token: string;
   expires_in: number;
-}
-
-export interface DecodedToken extends TokenPayload {
-  iat: number;
-  exp: number;
-  iss: string;
 }
 
 // ============================================================================

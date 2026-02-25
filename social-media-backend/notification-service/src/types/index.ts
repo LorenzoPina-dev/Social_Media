@@ -16,7 +16,8 @@ export type {
 // DB ENTITIES
 // ============================================================================
 
-export type NotificationType = 'LIKE' | 'COMMENT' | 'FOLLOW' | 'MENTION' | 'SHARE' | 'SYSTEM';
+// Use shared NotificationType for cross-service consistency.
+export type { NotificationType } from '@social-media/shared';
 export type EntityType = 'POST' | 'COMMENT' | 'USER';
 export type Platform = 'IOS' | 'ANDROID' | 'WEB';
 
@@ -184,14 +185,9 @@ export type ModerationEvent = ContentRejectedEvent | ContentApprovedEvent;
 // API RESPONSE
 // ============================================================================
 
-export interface ApiResponse<T = unknown> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  code?: string;
-}
+export type { ApiResponse } from '@social-media/shared';
 
-export interface PaginatedResponse<T> {
+export interface NotificationPaginatedResponse<T> {
   success: true;
   data: T[];
   cursor?: string;
