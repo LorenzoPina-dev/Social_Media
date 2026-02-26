@@ -144,6 +144,67 @@ export class PostModel {
       .update({ moderation_status: status, updated_at: new Date() });
   }
 
+  /**
+   * Feed composito — restituisce:
+   *  1. Tutti i post propri dell'utente (qualsiasi visibility)
+   *  2. Post PUBLIC di tutti gli utenti
+   *  3. Post FOLLOWERS degli utenti che l'utente segue (followingIds)
+   *
+   * Ordinamento: published_at DESC, id DESC (deterministic tie-break).
+   * Usa cursor-based pagination su (published_at, id).
+   */
+  async findFeed(
+    userId: string,
+    followingIds: string[],
+    options: {
+      cursor?: { published_at: string; id: string };
+      limit?: number;
+    } = {},
+  ): Promise<Post[]> {
+    const db = getDatabase();
+    const limit = options.limit || 21;
+
+    let query = db(this.table)
+      .whereNull('deleted_at')
+      .where('is_scheduled', false)
+      .whereNot('moderation_status', 'REJECTED')
+      .where(function () {
+        // 1. I miei post (qualsiasi visibilità)
+        this.where('user_id', userId);
+
+        // 2. Post pubblici di tutti
+        this.orWhere('visibility', 'PUBLIC');
+
+        // 3. Post FOLLOWERS delle persone che seguo
+        if (followingIds.length > 0) {
+          this.orWhere(function () {
+            this.where('visibility', 'FOLLOWERS').whereIn('user_id', followingIds);
+          });
+        }
+      })
+      .orderBy('published_at', 'desc')
+      .orderBy('id', 'desc')
+      .limit(limit);
+
+    // Cursor: salta i post già visti (published_at, id)
+    if (options.cursor) {
+      query = query.where(function () {
+        this.where('published_at', '<', options.cursor!.published_at).orWhere(
+          function () {
+            this.where('published_at', '=', options.cursor!.published_at).andWhere(
+              'id',
+              '<',
+              options.cursor!.id,
+            );
+          },
+        );
+      });
+    }
+
+    const posts = await query;
+    return posts.map((p: Record<string, unknown>) => this.normalize(p));
+  }
+
   /** Fetcha i post schedulati pronti da pubblicare */
   async findDueScheduledPosts(): Promise<Post[]> {
     const db = getDatabase();

@@ -32,6 +32,29 @@ export class PostController {
   }
 
   /**
+   * GET /api/v1/posts/feed
+   * Feed composito:
+   *  - I propri post (qualsiasi visibilità)
+   *  - Post PUBLIC di tutti
+   *  - Post FOLLOWERS degli utenti che si segue
+   * Ordinamento: published_at DESC. Paginazione cursor-based.
+   */
+  async getFeed(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const { cursor, limit } = req.query as { cursor?: string; limit?: string };
+
+      const result = await this.postService.getFeed(userId, {
+        cursor,
+        limit: limit ? parseInt(limit, 10) : undefined,
+      });
+      ok(res, result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * GET /api/v1/posts/:id
    */
   async getById(req: Request, res: Response, next: NextFunction): Promise<void> {

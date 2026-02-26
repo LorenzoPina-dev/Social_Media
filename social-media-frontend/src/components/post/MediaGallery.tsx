@@ -4,7 +4,7 @@ import styles from './MediaGallery.module.css';
 
 interface MediaGalleryProps {
   mediaUrls: string[];
-  mediaTypes: MediaType[];
+  mediaTypes: string[];
   className?: string;
 }
 
@@ -30,12 +30,12 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
 
   return (
     <div className={`${styles.gallery} ${className}`}>
-      <div className={styles.mainMedia}>
+      <div className={styles.mainMedia} >
         {mediaTypes[currentIndex] === 'video' ? (
           <video
             src={mediaUrls[currentIndex]}
             controls
-            className={styles.media}
+            className={styles.mediaItem}
           />
         ) : (
           <img

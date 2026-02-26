@@ -1,18 +1,30 @@
 import { apiClient } from './client';
 import {
   Post,
-  CreatePostRequest,
   UpdatePostRequest,
   TrendingHashtag,
   PostHistory,
+  Visibility,
+  MediaType,
 } from '@/types/post.types';
 import { CursorParams, PaginatedResponse } from '@/types/api.types';
 
+export interface CreatePostRequest {
+  content: string;
+  media_urls?: string[];
+  media_types?: MediaType[];
+  visibility?: Visibility;
+  scheduled_at?: string;
+}
+
 export const createPost = async (data: CreatePostRequest) => {
-  return apiClient.post<Post>('/api/v1/posts', data);
+  return apiClient.post<Post>('/api/v1/posts/', data);
 };
 
 export const getPost = async (postId: string) => {
+  if (!postId) {
+    return Promise.reject(new Error('getPost requires a valid postId.'));
+  }
   return apiClient.get<Post>(`/api/v1/posts/${postId}`);
 };
 

@@ -372,7 +372,7 @@ services:
         condition: service_healthy
 
   # ---------------------------------------------------------------------------
-  # media-service — Porta 3004  (~5% struttura)
+  # media-service — Porta 3004
   # ---------------------------------------------------------------------------
   media-service:
     <<: *common-service
@@ -380,11 +380,11 @@ services:
     build:
       context: .               # monorepo context (include /shared)
       dockerfile: ./media-service/Dockerfile
+    
     volumes:
-      - ./media-service/src:/app/src:delegated
-      - ./media-service/migrations:/app/migrations:delegated
+      - ./media-service/src:/app/media-service/src:delegated
+      - ./media-service/migrations:/app/media-service/migrations:delegated
       - ./shared:/app/shared:delegated
-      - media_node_modules:/app/node_modules
     ports:
       - "3004:3004"
     environment:
@@ -394,19 +394,24 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/media_db
       DB_POOL_MIN: 2
       DB_POOL_MAX: 10
+      DB_CONNECTION_TIMEOUT: "10000"
       REDIS_URL: redis://redis:6379
       <<: *common-env
       KAFKA_CLIENT_ID: media-service
       KAFKA_GROUP_ID: media-service-group
-      # MinIO (S3-compatible)
+      # MinIO (S3-compatible) — config/index.ts reads both env var names
       AWS_ENDPOINT: http://minio:9000
+      MINIO_ENDPOINT: http://minio:9000
       AWS_REGION: us-east-1
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin123
       AWS_BUCKET_NAME: media
+      AWS_S3_BUCKET: media
       AWS_BUCKET_THUMBNAILS: media-thumbnails
       AWS_FORCE_PATH_STYLE: "true"
+      STORAGE_TYPE: minio
       CDN_BASE_URL: http://localhost:9000/media
+      PRESIGNED_URL_EXPIRY_SECONDS: "900"
       LOG_LEVEL: debug
     depends_on:
       postgres:

@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -28,12 +28,22 @@ export const FeedPost = forwardRef<HTMLDivElement, FeedPostProps>(
     const handleSaveUpdate = (saved: boolean) => {
       onUpdate?.({ is_saved: saved });
     };
+    
+      const mediaUrls = useMemo(() => {
+        if (!post.media_urls) return [];
+        return typeof post.media_urls === 'string' ? JSON.parse(post.media_urls) : post.media_urls;
+      }, [post.media_urls]);
+    
+      const mediaTypes = useMemo(() => {
+        if (!post.media_types) return [];
+        return typeof post.media_types === 'string' ? JSON.parse(post.media_types) : post.media_types;
+      }, [post.media_types]);
 
     return (
       <article className={styles.post} ref={ref}>
         <header className={styles.header}>
           <div className={styles.userInfo}>
-            <Link to={`/profile/${post.user.username}`}>
+            <Link to={`/profile/${post.user.id}`}>
               <Avatar
                 src={post.user.avatar_url}
                 username={post.user.username}
@@ -70,8 +80,8 @@ export const FeedPost = forwardRef<HTMLDivElement, FeedPostProps>(
 
         {post.media_urls && post.media_urls.length > 0 && (
           <MediaGallery
-            mediaUrls={post.media_urls}
-            mediaTypes={post.media_types}
+            mediaUrls={mediaUrls}
+            mediaTypes={mediaTypes}
             className={styles.media}
           />
         )}

@@ -22,6 +22,7 @@ import {
   PostForbiddenError,
   ValidationError,
 } from '../types';
+import { UserServiceClient } from './userService.client';
 
 // L1 in-process cache (TTL 60s, max 1000 entries)
 const l1Cache = new Map<string, { post: Post; expiresAt: number }>();
@@ -55,6 +56,7 @@ export class PostService {
     private hashtagService: HashtagService,
     private cacheService: CacheService,
     private postProducer: PostProducer,
+    private userServiceClient?: UserServiceClient,
   ) {}
 
   // ─── CREATE ──────────────────────────────────────────────────────────────
@@ -97,6 +99,57 @@ export class PostService {
       logger.error('Failed to create post', { error, userId });
       throw error;
     }
+  }
+
+  // ─── FEED ────────────────────────────────────────────────────────────────
+
+  async getFeed(
+    userId: string,
+    query: ListPostsQuery,
+  ): Promise<CursorPage<Post>> {
+    const limit = Math.min(
+      query.limit || config.PAGINATION.DEFAULT_PAGE_SIZE,
+      config.PAGINATION.MAX_PAGE_SIZE,
+    );
+
+    // Tipo cursor specifico per il feed: usa published_at (non created_at)
+    let cursor: { published_at: string; id: string } | undefined;
+    if (query.cursor) {
+      try {
+        cursor = JSON.parse(
+          Buffer.from(query.cursor, 'base64').toString('utf8'),
+        ) as { published_at: string; id: string };
+      } catch {
+        throw new ValidationError('Invalid cursor');
+      }
+    }
+
+    // Recupera i following IDs dal user-service (con cache L1+L2)
+    const followingIds = this.userServiceClient
+      ? await this.userServiceClient.getFollowingIds(userId)
+      : [];
+
+    // Feed composito: miei post + PUBLIC di tutti + FOLLOWERS di chi seguo
+    const posts = await this.postModel.findFeed(userId, followingIds, {
+      cursor,
+      limit: limit + 1, // +1 per determinare has_more
+    });
+
+    const hasMore = posts.length > limit;
+    const data = hasMore ? posts.slice(0, limit) : posts;
+
+    let nextCursor: string | undefined;
+    if (hasMore && data.length > 0) {
+      const last = data[data.length - 1];
+      nextCursor = Buffer.from(
+        JSON.stringify({
+          id: last.id,
+          published_at: last.published_at,
+        }),
+      ).toString('base64');
+    }
+
+    return { items: data, cursor: nextCursor, has_more: hasMore };
   }
 
   // ─── GET ─────────────────────────────────────────────────────────────────

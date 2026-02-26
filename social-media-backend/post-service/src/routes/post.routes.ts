@@ -7,7 +7,7 @@ import Joi from 'joi';
 import { PostController } from '../controllers/post.controller';
 import { validateBody, validateQuery, validateParams } from '../middleware/validation';
 import { requireAuth, optionalAuth } from '../middleware/auth.middleware';
-import { createPostLimiter } from '../middleware/rateLimiter';
+import { createPostLimiter, feedLimiter } from '../middleware/rateLimiter';
 
 // ─── Validation Schemas ──────────────────────────────────────────────────────
 
@@ -53,6 +53,15 @@ export function setupPostRoutes(postController: PostController): Router {
     '/trending/hashtags',
     validateQuery(trendingQuery),
     postController.getTrendingHashtags.bind(postController),
+  );
+
+  // Feed personale — DEVE stare prima di /:id per evitare conflitti di routing
+  router.get(
+    '/feed',
+    requireAuth,
+    feedLimiter(),
+    validateQuery(listPostsQuery),
+    postController.getFeed.bind(postController),
   );
 
   // Create post

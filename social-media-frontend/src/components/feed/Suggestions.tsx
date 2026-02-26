@@ -69,7 +69,7 @@ export const Suggestions: React.FC = () => {
       
       {suggestions.map((user) => (
         <div key={user.id} className={styles.suggestion}>
-          <Link to={`/profile/${user.username}`} className={styles.userInfo}>
+          <Link to={`/profile/${user.id}`} className={styles.userInfo}>
             <Avatar
               src={user.avatar_url}
               username={user.username}

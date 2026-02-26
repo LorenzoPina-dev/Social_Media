@@ -33,7 +33,14 @@ export const useComments = (postId: string) => {
         limit: 20,
       });
 
-      const payload = unwrapData<any>(response.data);
+      type PaginationEnvelope = {
+        pagination?: {
+          cursor?: string | null;
+        };
+        cursor?: string | null;
+      };
+
+      const payload = unwrapData<PaginationEnvelope>(response.data);
       const newComments = unwrapItems<Comment>(response.data);
       const newCursor = payload?.pagination?.cursor ?? payload?.cursor ?? null;
       
@@ -41,7 +48,8 @@ export const useComments = (postId: string) => {
       setCursor(newCursor || null);
       setHasMore(!!newCursor);
     } catch (err) {
-      setError(err as Error);
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      setError(error);
     } finally {
       setIsLoading(false);
     }
@@ -52,7 +60,12 @@ export const useComments = (postId: string) => {
       toast.error('Devi essere loggato per commentare');
       return;
     }
-    
+
+    if (!postId) {
+      toast.error('Impossibile determinare il post da commentare');
+      return;
+    }
+
     setIsSending(true);
     
     try {
@@ -61,15 +74,26 @@ export const useComments = (postId: string) => {
       const newComment = unwrapData<Comment>(response.data);
       
       if (parentId) {
-        // Aggiungi come risposta al commento padre
+        // Aggiungi come risposta al commento padre e aggiorna sia reply_count che replies_count
         setComments(prev =>
           prev.map(comment =>
             comment.id === parentId
-              ? {
-                  ...comment,
-                  replies: [...(comment.replies || []), newComment],
-                  reply_count: (comment.reply_count || 0) + 1,
-                }
+              ? (() => {
+                  const currentCount =
+                    typeof comment.replies_count === 'number'
+                      ? comment.replies_count
+                      : typeof comment.reply_count === 'number'
+                      ? comment.reply_count
+                      : 0;
+                  const nextCount = currentCount + 1;
+
+                  return {
+                    ...comment,
+                    replies: [...(comment.replies || []), newComment],
+                    reply_count: nextCount,
+                    replies_count: nextCount,
+                  };
+                })()
               : comment
           )
         );
@@ -81,7 +105,10 @@ export const useComments = (postId: string) => {
       toast.success('Commento aggiunto');
       return newComment;
     } catch (err) {
-      toast.error('Errore durante l\'invio del commento');
+      console.error('Failed to create comment:', err);
+      // Show backend message when available
+      const message = err instanceof Error ? err.message : 'Errore durante l\'invio del commento';
+      toast.error(message);
       throw err;
     } finally {
       setIsSending(false);
@@ -89,7 +116,10 @@ export const useComments = (postId: string) => {
   }, [postId, isAuthenticated]);
 
   const removeComment = useCallback(async (commentId: string) => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      toast.error('Devi effettuare il login per eliminare un commento');
+      return;
+    }
     
     try {
       await deleteComment(commentId);

@@ -4,7 +4,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { Post } from '@/types/post.types';
 import { Avatar } from '@/components/common/Avatar/Avatar';
-import { PostActions } from './PostActions';
+import { PostActions } from '@/components/post/PostActions';
 import { MediaGallery } from './MediaGallery';
 import { PostMenu } from './PostMenu';
 import { CommentSection } from '@/components/interactions/CommentSection';
@@ -12,7 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import styles from './PostCard.module.css';
 
 interface PostCardProps {
-  post: Post;
+  post: Post & { user: { username: string, avatar_url?: string, verified?: boolean }, is_liked: boolean, is_saved: boolean };
   onLike?: () => void;
   onComment?: () => void;
   onShare?: () => void;
@@ -87,7 +87,7 @@ export const PostCard: React.FC<PostCardProps> = ({
       {post.media_urls && post.media_urls.length > 0 && (
         <MediaGallery
           mediaUrls={post.media_urls}
-          mediaTypes={post.media_types}
+          mediaTypes={post.media_types as string[]}
           className={styles.media}
         />
       )}

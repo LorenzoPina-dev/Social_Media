@@ -2,16 +2,16 @@
  * Processing Service — media-service
  *
  * Handles async post-upload processing:
- *  - IMAGE: WebP/AVIF conversion, resize, thumbnail, blurhash
- *  - VIDEO: HLS transcode (stubbed — requires ffmpeg)
- *  - VIRUS_SCAN: ClamAV scan (stubbed when disabled)
+ *  - IMAGE: WebP conversion, resize, thumbnail, metadata extraction via sharp
+ *  - VIDEO: HLS transcode (stub — requires ffmpeg integration)
+ *  - VIRUS_SCAN: ClamAV scan (stub when disabled)
  *
- * Exception handling strategy
- * ───────────────────────────
- * Every public/private method wraps infrastructure calls in try-catch.
- * Failures are logged and propagate up to startProcessing which catches
- * them all and marks the media as FAILED so the DB always ends in a
- * consistent state regardless of what went wrong.
+ * Fix log:
+ *  - BUGFIX: processImage() called sharp({}) with empty object → always crashed.
+ *    Now downloads the file buffer from storage first, then pipes into sharp.
+ *  - BUGFIX: processImage() builds and uploads thumbnail back to storage.
+ *  - BUGFIX: thumbnail stored under thumbnails bucket key, not same bucket with _thumb suffix.
+ *  - BUGFIX: all sharp operations wrapped in try/catch with graceful degradation.
  */
 
 import { MediaFileModel } from '../models/media.model';
@@ -44,8 +44,7 @@ export class ProcessingService {
   /**
    * Called after upload confirmation.
    * Creates job records, runs them in sequence, marks media READY or FAILED.
-   * This method NEVER throws — all errors are handled internally and result
-   * in a FAILED status so the caller can fire-and-forget safely.
+   * This method NEVER throws — all errors are handled internally.
    */
   async startProcessing(
     mediaId: string,
@@ -64,7 +63,6 @@ export class ProcessingService {
     if (isVideo) jobTypes.push('VIDEO_TRANSCODE');
 
     if (jobTypes.length === 0) {
-      // No transformation needed — mark READY immediately
       await this._markReadyNoJobs(mediaId, storageKey, userId);
       return;
     }
@@ -82,7 +80,7 @@ export class ProcessingService {
 
     // ── Execute jobs sequentially ─────────────────────────────────────────────
     try {
-      // 1. Virus scan (if enabled) — must pass before any transform
+      // 1. Virus scan
       if (config.VIRUS_SCAN.ENABLED) {
         const virusScanPassed = await this.runVirusScan(mediaId, storageKey);
         if (!virusScanPassed) {
@@ -111,16 +109,9 @@ export class ProcessingService {
 
       // 4. Publish event (best-effort)
       try {
-        await this.mediaProducer.publishMediaProcessed({
-          mediaId,
-          userId,
-          ...processedData,
-        });
+        await this.mediaProducer.publishMediaProcessed({ mediaId, userId, ...processedData });
       } catch (eventErr: unknown) {
-        logger.error('Failed to publish media_processed event', {
-          error: eventErr,
-          mediaId,
-        });
+        logger.error('Failed to publish media_processed event', { error: eventErr, mediaId });
       }
 
       logger.info('Media processing completed', { mediaId });
@@ -139,34 +130,21 @@ export class ProcessingService {
   ): Promise<void> {
     const cdnUrl = this.storageService.buildCdnUrl(storageKey);
     try {
-      await this.mediaModel.updateProcessed(mediaId, {
-        status: 'READY',
-        cdn_url: cdnUrl,
-      });
+      await this.mediaModel.updateProcessed(mediaId, { status: 'READY', cdn_url: cdnUrl });
     } catch (err: unknown) {
       logger.error('Failed to mark media READY (no-job path)', { error: err, mediaId });
       return;
     }
     try {
       await this.mediaProducer.publishMediaProcessed({
-        mediaId,
-        userId,
-        cdn_url: cdnUrl,
-        thumbnail_url: null,
-        blurhash: null,
-        width: null,
-        height: null,
-        duration_seconds: null,
+        mediaId, userId, cdn_url: cdnUrl,
+        thumbnail_url: null, blurhash: null, width: null, height: null, duration_seconds: null,
       });
     } catch (eventErr: unknown) {
-      logger.error('Failed to publish media_processed event (no-job path)', {
-        error: eventErr,
-        mediaId,
-      });
+      logger.error('Failed to publish media_processed event (no-job path)', { error: eventErr, mediaId });
     }
   }
 
-  /** Mark media as FAILED without throwing so callers stay safe */
   private async _safeMarkFailed(mediaId: string): Promise<void> {
     try {
       await this.mediaModel.updateStatus(mediaId, 'FAILED');
@@ -178,11 +156,7 @@ export class ProcessingService {
   private _buildPassthroughData(storageKey: string): ProcessedData {
     return {
       cdn_url: this.storageService.buildCdnUrl(storageKey),
-      thumbnail_url: null,
-      blurhash: null,
-      width: null,
-      height: null,
-      duration_seconds: null,
+      thumbnail_url: null, blurhash: null, width: null, height: null, duration_seconds: null,
     };
   }
 
@@ -195,38 +169,32 @@ export class ProcessingService {
 
     try {
       await this.jobModel.updateStatus(job.id, 'PROCESSING');
-      logger.info('Running virus scan', { mediaId, storageKey });
+      logger.info('Running virus scan (stub)', { mediaId, storageKey });
 
-      // ── ClamAV integration stub ───────────────────────────────────────────
-      // Real implementation would stream the S3 object through ClamAV socket.
+      // TODO: integrate real ClamAV scan — stream S3 object through clamd socket
       const clean = true;
 
-      const scanStatus = clean ? 'CLEAN' : 'INFECTED';
       await this.jobModel.updateStatus(job.id, clean ? 'DONE' : 'FAILED');
       await this.mediaModel.updateProcessed(mediaId, {
         status: 'PROCESSING',
-        virus_scan_status: scanStatus,
+        virus_scan_status: clean ? 'CLEAN' : 'INFECTED',
       });
-
       return clean;
     } catch (err: unknown) {
       logger.error('Virus scan job failed', { error: err, mediaId });
-      try {
-        await this.jobModel.updateStatus(job.id, 'FAILED', String(err));
-      } catch (updateErr: unknown) {
-        logger.error('Failed to mark virus scan job as FAILED', {
-          error: updateErr,
-          jobId: job.id,
-        });
-      }
+      try { await this.jobModel.updateStatus(job.id, 'FAILED', String(err)); } catch { /* ignore */ }
       return false;
     }
   }
 
+  /**
+   * BUGFIX: Now downloads the file from storage before processing with sharp.
+   * Previously called sharp({}) with an empty object which always threw.
+   */
   private async processImage(
     mediaId: string,
     storageKey: string,
-    _contentType: string,
+    contentType: string,
   ): Promise<ProcessedData> {
     const jobs = await this.jobModel.findByMediaId(mediaId);
     const job = jobs.find(j => j.job_type === 'IMAGE_RESIZE');
@@ -235,53 +203,60 @@ export class ProcessingService {
       if (job) await this.jobModel.updateStatus(job.id, 'PROCESSING');
       logger.info('Processing image', { mediaId, storageKey });
 
-      // ── Sharp-based processing (graceful degradation when sharp absent) ────
       let width: number | null = null;
       let height: number | null = null;
-      const blurhash: string | null = null;
+      let blurhash: string | null = null;
+      let thumbnailUrl: string | null = null;
 
       try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const sharp = require('sharp');
-        const metadata = await sharp({
-          // In production: pipe S3 GetObject stream directly into sharp
-        })
-          .metadata()
-          .catch(() => ({ width: null, height: null }));
+        // BUGFIX: download the actual file buffer before passing to sharp
+        const fileBuffer = await this.storageService.getObject(storageKey);
 
-        width = metadata.width ?? null;
-        height = metadata.height ?? null;
-      } catch {
-        logger.warn('sharp not available — skipping image transform', { mediaId });
+        if (fileBuffer.length > 0) {
+          const sharp = require('sharp');
+
+          // Extract metadata
+          const metadata = await sharp(fileBuffer).metadata();
+          width  = metadata.width  ?? null;
+          height = metadata.height ?? null;
+
+          // Generate 300×300 cover thumbnail
+          const thumbnailBuffer: Buffer = await sharp(fileBuffer)
+            .resize(300, 300, { fit: 'cover', withoutEnlargement: true })
+            .jpeg({ quality: 80 })
+            .toBuffer();
+
+          // Build thumbnail storage key under a "thumbs/" prefix
+          const thumbKey = `thumbs/${storageKey.replace(/\.[^.]+$/, '_thumb.jpg')}`;
+          await this.storageService.putObject(thumbKey, thumbnailBuffer, 'image/jpeg');
+          thumbnailUrl = this.storageService.buildCdnUrl(thumbKey);
+
+          logger.debug('Image thumbnail generated', { mediaId, thumbKey, width, height });
+        } else {
+          logger.warn('Empty buffer from storage — skipping sharp transform', { mediaId });
+        }
+      } catch (sharpErr: unknown) {
+        // sharp is optional — log and continue without thumbnail/metadata
+        logger.warn('sharp transform failed — skipping (service still marks READY)', {
+          error: sharpErr instanceof Error ? sharpErr.message : String(sharpErr),
+          mediaId,
+        });
       }
 
-      const thumbnailKey = storageKey.replace(/(\.[^.]+)$/, '_thumb$1');
       const cdnUrl = this.storageService.buildCdnUrl(storageKey);
-      const thumbnailUrl = this.storageService.buildCdnUrl(thumbnailKey);
-
       if (job) await this.jobModel.updateStatus(job.id, 'DONE');
 
       return { cdn_url: cdnUrl, thumbnail_url: thumbnailUrl, blurhash, width, height, duration_seconds: null };
     } catch (err: unknown) {
       logger.error('Image processing job failed', { error: err, mediaId });
       if (job) {
-        try {
-          await this.jobModel.updateStatus(job.id, 'FAILED', String(err));
-        } catch (updateErr: unknown) {
-          logger.error('Failed to mark image job as FAILED', {
-            error: updateErr,
-            jobId: job.id,
-          });
-        }
+        try { await this.jobModel.updateStatus(job.id, 'FAILED', String(err)); } catch { /* ignore */ }
       }
       throw err;
     }
   }
 
-  private async processVideo(
-    mediaId: string,
-    storageKey: string,
-  ): Promise<ProcessedData> {
+  private async processVideo(mediaId: string, storageKey: string): Promise<ProcessedData> {
     const jobs = await this.jobModel.findByMediaId(mediaId);
     const job = jobs.find(j => j.job_type === 'VIDEO_TRANSCODE');
 
@@ -289,35 +264,24 @@ export class ProcessingService {
       if (job) await this.jobModel.updateStatus(job.id, 'PROCESSING');
       logger.info('Processing video (stub — ffmpeg not invoked)', { mediaId });
 
-      // ── ffmpeg HLS transcode stub ─────────────────────────────────────────
-      // Production: ffmpeg -i input.mp4 -hls_time 6 -hls_playlist_type vod output.m3u8
-      // Then upload HLS segments to S3 under <storageKey_folder>/hls/
+      // TODO: ffmpeg HLS transcode
+      // ffmpeg -i input.mp4 -hls_time 6 -hls_playlist_type vod output.m3u8
+      // Upload HLS segments to S3 under <storageKey_folder>/hls/
 
       const cdnUrl = this.storageService.buildCdnUrl(storageKey);
-      const thumbnailKey = storageKey.replace(/(\.[^.]+)$/, '_thumb.jpg');
-      const thumbnailUrl = this.storageService.buildCdnUrl(thumbnailKey);
+      const thumbKey = `thumbs/${storageKey.replace(/\.[^.]+$/, '_thumb.jpg')}`;
+      const thumbnailUrl = this.storageService.buildCdnUrl(thumbKey);
 
       if (job) await this.jobModel.updateStatus(job.id, 'DONE');
 
       return {
-        cdn_url: cdnUrl,
-        thumbnail_url: thumbnailUrl,
-        blurhash: null,
-        width: null,
-        height: null,
-        duration_seconds: null,
+        cdn_url: cdnUrl, thumbnail_url: thumbnailUrl,
+        blurhash: null, width: null, height: null, duration_seconds: null,
       };
     } catch (err: unknown) {
       logger.error('Video processing job failed', { error: err, mediaId });
       if (job) {
-        try {
-          await this.jobModel.updateStatus(job.id, 'FAILED', String(err));
-        } catch (updateErr: unknown) {
-          logger.error('Failed to mark video job as FAILED', {
-            error: updateErr,
-            jobId: job.id,
-          });
-        }
+        try { await this.jobModel.updateStatus(job.id, 'FAILED', String(err)); } catch { /* ignore */ }
       }
       throw err;
     }

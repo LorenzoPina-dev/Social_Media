@@ -108,3 +108,17 @@ export function createPostLimiter() {
     errorCode: 'TOO_MANY_REQUESTS',
   });
 }
+
+/**
+ * Rate limiter per il feed (1 min / 60 richieste).
+ * Più permissivo del create — il feed viene polled di frequente dai client.
+ */
+export function feedLimiter() {
+  return rateLimiter({
+    windowMs: 60 * 1000,
+    maxRequests: 60,
+    keyPrefix: 'ratelimit:feed',
+    errorMessage: 'Too many feed requests',
+    errorCode: 'TOO_MANY_REQUESTS',
+  });
+}

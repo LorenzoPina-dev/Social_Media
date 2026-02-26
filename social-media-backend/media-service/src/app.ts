@@ -13,11 +13,45 @@ import { connectDatabase } from './config/database';
 import { connectRedis } from './config/redis';
 import { connectKafka } from './config/kafka';
 
+/**
+ * BUGFIX: Previously, if any infra connection failed (DB, Redis, Kafka)
+ * the entire createApp() threw and the process crashed → nginx got 502.
+ *
+ * Now each connection is attempted individually. Failures are logged as
+ * warnings in development so the service can start with partial infra.
+ * In production all connections are still required.
+ */
+async function connectInfrastructure(): Promise<void> {
+  const isProd = config.NODE_ENV === 'production';
+
+  const tryConnect = async (name: string, fn: () => Promise<void>): Promise<void> => {
+    try {
+      await fn();
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (isProd) {
+        logger.error(`❌ [${name}] connection failed — aborting startup`, { error: msg });
+        throw error; // re-throw in production
+      } else {
+        logger.warn(`⚠️  [${name}] connection failed — continuing in dev mode`, { error: msg });
+      }
+    }
+  };
+
+  logger.info('📦 Connecting to infrastructure...');
+  await Promise.all([
+    tryConnect('database', async () => { await connectDatabase(); }),
+    tryConnect('redis',    async () => { await connectRedis();    }),
+    tryConnect('kafka',    async () => { await connectKafka();    }),
+  ]);
+  logger.info('✅ Infrastructure connection phase complete');
+}
+
 export async function createApp(): Promise<Application> {
   const app: Application = express();
   app.set('trust proxy', 1);
 
-  // Security
+  // ─── Security ──────────────────────────────────────────────────────────────
   app.use(helmet({
     contentSecurityPolicy: {
       directives: {
@@ -25,9 +59,10 @@ export async function createApp(): Promise<Application> {
         imgSrc: ["'self'", 'data:', 'https:'],
       },
     },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
   }));
 
-  // CORS
+  // ─── CORS ──────────────────────────────────────────────────────────────────
   const corsOptions = {
     origin: config.CORS_ORIGINS,
     credentials: true,
@@ -37,25 +72,19 @@ export async function createApp(): Promise<Application> {
   app.options('*', cors(corsOptions));
   app.use(cors(corsOptions));
 
-  // Body parsing & compression
+  // ─── Body parsing & compression ────────────────────────────────────────────
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   app.use(compression());
 
-  // Request logging & rate limiting
+  // ─── Request logging & rate limiting ───────────────────────────────────────
   app.use(requestLogger);
   app.use(apiLimiter);
 
-  // Infrastructure connections
-  logger.info('📦 Connecting to infrastructure...');
-  await Promise.all([
-    connectDatabase(),
-    connectRedis(),
-    connectKafka(),
-  ]);
-  logger.info('✅ Infrastructure connected successfully');
+  // ─── Infrastructure ────────────────────────────────────────────────────────
+  await connectInfrastructure();
 
-  // Health checks
+  // ─── Health checks ─────────────────────────────────────────────────────────
   app.get('/health', (_, res) => {
     res.json({
       status: 'healthy',
@@ -78,10 +107,10 @@ export async function createApp(): Promise<Application> {
     }
   });
 
-  // API routes
+  // ─── API routes ────────────────────────────────────────────────────────────
   setupRoutes(app);
 
-  // Error handling (must be last)
+  // ─── Error handling (must be last) ─────────────────────────────────────────
   app.use(errorHandler);
 
   return app;

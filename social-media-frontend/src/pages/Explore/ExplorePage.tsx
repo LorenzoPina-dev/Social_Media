@@ -110,8 +110,9 @@ const ExplorePage = () => {
           <div className={styles.trendingGrid}>
             {trendingPosts.map((post) => (
               <div key={post.id} className={styles.trendingItem}>
+                <h1>{JSON.stringify(post)}</h1>
                 <img
-                  src={post.media_urls?.[0] || '/default-post.jpg'}
+                  src={post.media_urls?.[0].replace('urn:storage:', 'http://minio:9000/media/')|| '/default-post.jpg'}
                   alt=""
                   className={styles.trendingImage}
                 />

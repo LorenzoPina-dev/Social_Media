@@ -8,8 +8,8 @@ export async function up(knex: Knex): Promise<void> {
     table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
     table.uuid('user_id').notNullable();                     // no FK cross-DB
     table.text('content').notNullable();
-    table.specificType('media_urls', 'TEXT[]').nullable();
-    table.specificType('media_types', 'TEXT[]').nullable();
+    table.specificType('media_urls', 'text[]').nullable();
+    table.specificType('media_types', 'text[]').nullable();
     table
       .string('visibility', 20)
       .notNullable()

@@ -13,6 +13,10 @@ function validateEnv(): void {
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
+  // USER_SERVICE_URL è opzionale: se assente il feed funziona senza FOLLOWERS posts
+  if (!process.env.USER_SERVICE_URL) {
+    console.warn('[config] USER_SERVICE_URL not set — feed will not include FOLLOWERS posts');
+  }
 }
 
 validateEnv();
@@ -40,6 +44,9 @@ export const config = {
   KAFKA_GROUP_ID: 'post-service-group',
 
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || 'secret',
+
+  // URL interno del user-service per recuperare i following IDs
+  USER_SERVICE_URL: process.env.USER_SERVICE_URL || '',
 
   CACHE: {
     POST_TTL: 300,          // 5 minutes

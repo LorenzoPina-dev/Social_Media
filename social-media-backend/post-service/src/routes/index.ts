@@ -20,8 +20,10 @@ import { EditHistoryModel } from '../models/editHistory.model';
 import { SavedPostModel } from '../models/savedPost.model';
 
 import { PostProducer } from '../kafka/producers/post.producer';
+import { UserServiceClient } from '../services/userService.client';
 import { logger } from '../utils/logger';
 import { fail } from '@social-media/shared';
+import { config } from '../config';
 
 // ─── Shared instances (singleton per processo) ────────────────────────────────
 
@@ -34,6 +36,7 @@ let sharedInstances: {
   postProducer: PostProducer;
   hashtagService: HashtagService;
   postService: PostService;
+  userServiceClient: UserServiceClient;
 } | null = null;
 
 /**
@@ -61,6 +64,10 @@ export function setupRoutes(app: Application): void {
   // ─── Domain services ──────────────────────────────────────────────────────
   const hashtagService = new HashtagService(hashtagModel);
 
+  // Client HTTP verso user-service (opzionale: se URL assente il feed
+  // funziona lo stesso, ma senza i post FOLLOWERS degli utenti seguiti)
+  const userServiceClient = new UserServiceClient(config.USER_SERVICE_URL, cacheService);
+
   const postService = new PostService(
     postModel,
     editHistoryModel,
@@ -68,6 +75,7 @@ export function setupRoutes(app: Application): void {
     hashtagService,
     cacheService,
     postProducer,
+    userServiceClient,
   );
 
   // Salva le istanze per riuso esterno (Kafka, Scheduler)
@@ -80,6 +88,7 @@ export function setupRoutes(app: Application): void {
     postProducer,
     hashtagService,
     postService,
+    userServiceClient,
   };
 
   // ─── Controllers ──────────────────────────────────────────────────────────

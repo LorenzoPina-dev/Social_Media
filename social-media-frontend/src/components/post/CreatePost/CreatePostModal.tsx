@@ -6,9 +6,8 @@ import { z } from 'zod';
 import { Modal } from '@/components/common/Modals/Modal';
 import { Button } from '@/components/common/Buttons/Button';
 import { TextArea } from '@/components/common/Inputs/TextArea';
-import { Select } from '@/components/common/Inputs/Select';
-import { getPresignedUrl, uploadMedia, confirmUpload } from '@/api/media';
-import { usePost } from '@/hooks/usePost';
+import { Select } from '@/components/common/Inputs/Select';import { uploadMedia, UploadedMedia } from '@/api/media';
+import { createPost } from '@/api/posts';
 import toast from 'react-hot-toast';
 import styles from './CreatePostModal.module.css';
 
@@ -33,6 +32,8 @@ interface FilePreview {
   previewUrl: string;
   progress: number; // 0-100, -1 = error
   mediaId?: string;
+  storageKey?: string;
+  mediaType?: string;
   uploaded: boolean;
 }
 
@@ -47,8 +48,6 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { create } = usePost();
-
   /* ── form ── */
   const {
     register,
@@ -116,49 +115,43 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   };
 
   /* ── upload all pending files and return mediaIds ── */
-  const uploadPendingFiles = async (): Promise<string[]> => {
+  const uploadPendingFiles = async (): Promise<{ media_urls: string[], media_types: string[] }> => {
+    const uploaded = files.filter(f => f.uploaded);
     const pending = files.filter(f => !f.uploaded);
-    const ids: string[] = files.filter(f => f.uploaded && f.mediaId).map(f => f.mediaId!);
+    const media_urls: string[] = uploaded.map(f => `urn:storage:${f.storageKey!}`);
+    const media_types: string[] = uploaded.map(f => f.mediaType!.split('/')[0]); // 'image/jpeg' -> 'image'
 
     for (const entry of pending) {
-      const idx = files.indexOf(entry);
       try {
-        const { data } = await getPresignedUrl({
-          filename: entry.file.name,
-          contentType: entry.file.type,
-          sizeBytes: entry.file.size,
-        });
+        setFiles(prev =>
+          prev.map(f => f.previewUrl === entry.previewUrl ? { ...f, progress: 20 } : f)
+        );
 
-        await uploadMedia(data.uploadUrl, entry.file, (progress) => {
-          setFiles(prev =>
-            prev.map((f, i) => i === idx ? { ...f, progress } : f)
-          );
-        });
-
-        await confirmUpload(data.mediaId);
+        const { mediaId, storageKey, mediaType } = await uploadMedia(entry.file);
 
         setFiles(prev =>
-          prev.map((f, i) => i === idx ? { ...f, progress: 100, uploaded: true, mediaId: data.mediaId } : f)
+          prev.map(f => f.previewUrl === entry.previewUrl ? { ...f, progress: 100, uploaded: true, mediaId, storageKey, mediaType } : f)
         );
-        ids.push(data.mediaId);
+        media_urls.push(`urn:storage:${storageKey}`); // Trasforma la chiave in un URN valido
+        media_types.push(mediaType.split('/')[0]);    // Trasforma 'image/jpeg' in 'image'
       } catch {
         setFiles(prev =>
-          prev.map((f, i) => i === idx ? { ...f, progress: -1 } : f)
+          prev.map(f => f.previewUrl === entry.previewUrl ? { ...f, progress: -1 } : f)
         );
         throw new Error('upload_failed');
       }
     }
-    return ids;
+    return { media_urls, media_types };
   };
 
   /* ── submit ── */
   const onSubmit = async (data: PostFormData) => {
-    let mediaIds: string[] = [];
+    let postMedia: { media_urls: string[], media_types: (string | undefined)[] } = { media_urls: [], media_types: [] };
 
     // Tenta upload media se ci sono file — ma non blocca la pubblicazione
     if (files.length > 0) {
       try {
-        mediaIds = await uploadPendingFiles();
+        postMedia = await uploadPendingFiles();
       } catch {
         setUploadError(
           'Impossibile caricare i file multimediali (servizio non disponibile). ' +
@@ -178,10 +171,11 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         ? `${data.content}\n\n${extraTags}`
         : data.content;
 
-      await create({
+      await createPost({
         ...data,
         content: finalContent,
-        media_ids: mediaIds,
+        media_urls: postMedia.media_urls,
+        media_types: postMedia.media_types as any,
       });
 
       toast.success('Post pubblicato!');

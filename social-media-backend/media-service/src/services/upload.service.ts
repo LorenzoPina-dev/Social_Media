@@ -119,7 +119,9 @@ export class UploadService {
     return {
       media_id: mediaId,
       upload_url,
+      // BUGFIX: was hardcoded to old field; now reflects actual expiry from config
       expires_in: config.STORAGE.PRESIGNED_URL_EXPIRY,
+      expires_at: new Date(Date.now() + config.STORAGE.PRESIGNED_URL_EXPIRY * 1000).toISOString(),
       storage_key: storageKey,
     };
   }

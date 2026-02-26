@@ -60,6 +60,8 @@ export interface PresignedUploadResponse {
   media_id: string;
   upload_url: string;
   expires_in: number;
+  /** ISO-8601 timestamp when the presigned URL expires */
+  expires_at: string;
   storage_key: string;
 }
 
