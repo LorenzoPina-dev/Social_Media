@@ -16,7 +16,15 @@ export class UserProducer {
     }
   }
 
-  async publishUserCreated(data: { userId: string; username: string; email: string; timestamp: Date }): Promise<void> {
+  async publishUserCreated(data: {
+    userId: string;
+    username: string;
+    email: string;
+    display_name?: string;
+    avatar_url?: string;
+    verified?: boolean;
+    timestamp: Date;
+  }): Promise<void> {
     const producer = this.getProducer();
     if (!producer) return;
     try {
@@ -30,7 +38,15 @@ export class UserProducer {
     }
   }
 
-  async publishUserUpdated(data: any): Promise<void> {
+  async publishUserUpdated(data: {
+    userId: string;
+    username?: string;
+    display_name?: string;
+    avatar_url?: string | null;
+    bio?: string;
+    verified?: boolean;
+    timestamp: Date;
+  }): Promise<void> {
     const producer = this.getProducer();
     if (!producer) return;
     try {

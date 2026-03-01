@@ -3,6 +3,58 @@
   margin: 0 auto;
 }
 
+/* ── Inline post composer ── */
+.composer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-card, #1a1a2e);
+  border: 1px solid var(--border, #2a2a3e);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.composer:hover {
+  border-color: var(--primary, #4f8ef7);
+  background: var(--bg-card-hover, #1e1e35);
+}
+
+.composerInput {
+  flex: 1;
+  background: var(--bg-input, #111122);
+  border: 1px solid var(--border, #2a2a3e);
+  border-radius: 999px;
+  padding: 10px 16px;
+  pointer-events: none;
+}
+
+.composerPlaceholder {
+  color: var(--text-secondary, #888);
+  font-size: 0.9rem;
+  user-select: none;
+}
+
+.composerBtn {
+  background: var(--primary, #4f8ef7);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  pointer-events: none;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+
+.composer:hover .composerBtn {
+  opacity: 0.9;
+}
+
 .error {
   text-align: center;
   padding: var(--space-12) var(--space-4);

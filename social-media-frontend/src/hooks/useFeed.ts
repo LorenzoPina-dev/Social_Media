@@ -1,18 +1,20 @@
-import { useState, useCallback, useEffect } from 'react';
-import { getFeed } from '@/api/feed';
-import { FeedPost } from '@/types/feed.types';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { getPersonalisedFeed } from '@/api/feed';
+import { FeedItem } from '@/types/feed.types';
 import { useInfiniteScroll } from './useInfiniteScroll';
 import { useAuth } from './useAuth';
 import { unwrapData } from '@/api/envelope';
 
-export const useFeed = (initialParams?: any) => {
-  const [posts, setPosts] = useState<FeedPost[]>([]);
+export const useFeed = (_initialParams?: Record<string, unknown>) => {
+  const [posts, setPosts] = useState<FeedItem[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const { isAuthenticated } = useAuth();
+
+  const cursorRef = useRef<string | null>(null);
 
   const loadPosts = useCallback(async (reset = false) => {
     if (!isAuthenticated) return;
@@ -21,24 +23,32 @@ export const useFeed = (initialParams?: any) => {
     setError(null);
 
     try {
-      const response = await getFeed({
-        cursor: reset ? undefined : cursor || undefined,
+      const currentCursor = reset ? undefined : cursorRef.current ?? undefined;
+
+      const response = await getPersonalisedFeed({
+        cursor: currentCursor,
         limit: 10,
-        ...initialParams,
       });
 
-      const payload = unwrapData<any>(response.data);
-      const newPosts = Array.isArray(payload?.items)
-        ? payload.items
-        : Array.isArray(payload?.data)
-        ? payload.data
-        : Array.isArray(payload)
-        ? payload
-        : [];
-      const newCursor = payload?.nextCursor ?? payload?.cursor ?? null;
-      const newHasMore = typeof payload?.hasMore === 'boolean' ? payload.hasMore : !!newCursor;
+      // Envelope: { success: true, data: { items, nextCursor, hasMore, total } }
+      const payload = unwrapData<{
+        items: FeedItem[];
+        nextCursor: string | null;
+        hasMore: boolean;
+        total: number;
+      }>(response.data);
 
-      setPosts(prev => reset ? newPosts : [...prev, ...newPosts]);
+      const newItems: FeedItem[] = Array.isArray(payload?.items) ? payload.items : [];
+
+      // Filtra item senza dati post (post cancellati / non ancora in Redis)
+      const validItems = newItems.filter((item) => !!item.post);
+
+      const newCursor: string | null = payload?.nextCursor ?? null;
+      const newHasMore: boolean =
+        typeof payload?.hasMore === 'boolean' ? payload.hasMore : !!newCursor;
+
+      cursorRef.current = newCursor;
+      setPosts((prev) => (reset ? validItems : [...prev, ...validItems]));
       setCursor(newCursor);
       setHasMore(newHasMore);
     } catch (err) {
@@ -47,7 +57,15 @@ export const useFeed = (initialParams?: any) => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [cursor, isAuthenticated, initialParams]);
+  }, [isAuthenticated]);
+
+  // Caricamento iniziale
+  useEffect(() => {
+    if (isAuthenticated) {
+      cursorRef.current = null;
+      loadPosts(true);
+    }
+  }, [isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadMore = useCallback(async () => {
     if (hasMore && !isLoading) {
@@ -59,33 +77,34 @@ export const useFeed = (initialParams?: any) => {
 
   const refresh = useCallback(() => {
     setIsRefreshing(true);
+    cursorRef.current = null;
     setCursor(null);
     setHasMore(true);
     loadPosts(true);
   }, [loadPosts]);
 
   const removePost = useCallback((postId: string) => {
-    setPosts(prev => prev.filter(post => post.id !== postId));
+    setPosts((prev) => prev.filter((item) => item.postId !== postId));
   }, []);
 
-  const updatePost = useCallback((postId: string, updates: Partial<FeedPost>) => {
-    setPosts(prev =>
-      prev.map(post => (post.id === postId ? { ...post, ...updates } : post))
+  const updatePost = useCallback((postId: string, updates: Partial<FeedItem>) => {
+    setPosts((prev) =>
+      prev.map((item) => (item.postId === postId ? { ...item, ...updates } : item))
     );
   }, []);
 
-  const addPost = useCallback((newPost: FeedPost) => {
-    setPosts(prev => [newPost, ...prev]);
+  const addPost = useCallback((newItem: FeedItem) => {
+    setPosts((prev) => [newItem, ...prev]);
   }, []);
 
-  // Ascolta l'evento globale emesso quando viene creato un nuovo post
+  // Ascolta l'evento globale per il refresh
   useEffect(() => {
     const handleFeedRefresh = () => {
+      cursorRef.current = null;
       setCursor(null);
       setHasMore(true);
       loadPosts(true);
     };
-
     window.addEventListener('feed:refresh', handleFeedRefresh);
     return () => window.removeEventListener('feed:refresh', handleFeedRefresh);
   }, [loadPosts]);

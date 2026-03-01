@@ -164,6 +164,21 @@ export class FollowerController {
   }
 
   /**
+   * Get follower IDs only (no user hydration) — used by feed-service for fan-out.
+   * GET /api/v1/users/:id/followers/ids
+   */
+  async getFollowerIds(req: Request, res: Response): Promise<void> {
+    const { id } = req.params;
+    try {
+      const followerIds = await this.followerService.getFollowerIds(id);
+      ok(res, { followerIds, total: followerIds.length });
+    } catch (error) {
+      logger.error('Failed to get follower IDs', { error, userId: id });
+      fail(res, 500, 'INTERNAL_ERROR', 'Internal server error');
+    }
+  }
+
+  /**
    * Get follower statistics
    * GET /api/v1/users/:id/stats
    */

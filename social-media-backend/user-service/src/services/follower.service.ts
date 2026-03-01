@@ -211,6 +211,18 @@ export class FollowerService {
   }
 
   /**
+   * Get ALL follower IDs — no pagination, used by feed-service for fan-out.
+   */
+  async getFollowerIds(userId: string): Promise<string[]> {
+    try {
+      return await this.followerModel.getAllFollowerIds(userId);
+    } catch (error) {
+      logger.error('Failed to get follower IDs', { error, userId });
+      throw error;
+    }
+  }
+
+  /**
    * Remove all followers for a user (used during account deletion)
    */
   async removeAllFollowers(userId: string): Promise<void> {

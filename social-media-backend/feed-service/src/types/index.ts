@@ -28,7 +28,13 @@ export interface PostCreatedPayload {
   content: string;
   hashtags: string[];
   visibility: 'PUBLIC' | 'FOLLOWERS' | 'PRIVATE';
-  mediaUrls?: string[];
+  media_urls: string[];
+  media_types: string[];
+  like_count: number;
+  comment_count: number;
+  share_count: number;
+  published_at: string;
+  created_at: string;
 }
 
 export interface PostDeletedPayload {
@@ -37,6 +43,10 @@ export interface PostDeletedPayload {
 
 export interface PostUpdatedPayload {
   userId: string;
+  content?: string;
+  visibility?: string;
+  media_urls?: string[];
+  media_types?: string[];
 }
 
 /** interaction_events */
@@ -56,6 +66,23 @@ export interface CommentCreatedPayload {
 }
 
 /** user_events */
+export interface UserCreatedPayload {
+  userId: string;
+  username: string;
+  display_name?: string;
+  avatar_url?: string;
+  verified?: boolean;
+}
+
+export interface UserUpdatedPayload {
+  userId: string;
+  username?: string;
+  display_name?: string;
+  avatar_url?: string | null;
+  bio?: string;
+  verified?: boolean;
+}
+
 export interface FollowCreatedPayload {
   followingId: string; // the user being followed
 }
@@ -78,7 +105,7 @@ export interface FeedEntry {
 export interface FeedItem {
   postId: string;
   score: number;
-  /** Populated by joining with post-service */
+  /** Populated by hydration via post-service + user-service */
   post?: PostSummary;
 }
 
@@ -86,20 +113,30 @@ export interface PostSummary {
   id: string;
   userId: string;
   content: string;
-  mediaUrls?: string[];
+  /** First media item URL (convenience field) */
+  imageUrl: string | null;
+  /** MIME type / kind of the first media item, e.g. "image" or "video" */
+  imageType: string | null;
+  /** All media URLs */
+  mediaUrls: string[];
+  /** Matching type for each mediaUrl */
+  mediaTypes: string[];
   visibility: string;
   likeCount: number;
   commentCount: number;
   shareCount: number;
+  /** ISO string — preferred publish timestamp; falls back to createdAt */
+  publishedAt: string;
   createdAt: string;
-  author?: UserSummary;
+  /** Author profile, populated via user-service */
+  author: UserSummary | null;
 }
 
 export interface UserSummary {
   id: string;
   username: string;
   displayName: string;
-  avatarUrl?: string;
+  avatarUrl: string | null;
   verified: boolean;
 }
 

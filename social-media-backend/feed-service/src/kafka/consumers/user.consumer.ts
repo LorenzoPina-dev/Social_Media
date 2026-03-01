@@ -1,23 +1,43 @@
 /**
  * User Events Consumer
  *
- * Handles:
- *  - user_deleted      → delete the user's own feed
- *  - follow_created    → add the followed user's recent posts to follower's feed
- *  - follow_deleted    → remove posts authored by the unfollowed user from the follower's feed
+ * Responsibilities:
+ *  - user_created    → persist user profile in Redis for feed hydration
+ *  - user_updated    → update user profile in Redis
+ *  - user_deleted    → delete user's own feed + remove their posts from follower feeds
+ *                      + delete user profile from Redis
+ *  - follow_created  → seed follower's feed with the followed user's recent posts
+ *  - follow_deleted  → remove unfollowed user's posts from the follower's feed
  */
 
 import { feedService } from '../../services/feed.service';
+import { storeService } from '../../services/store.service';
 import { fetchFollowerIds, fetchUserRecentPostIds } from '../../services/http.service';
 import { logger } from '../../utils/logger';
 import { metrics } from '../../utils/metrics';
-import type { KafkaEvent, FollowCreatedPayload, FollowDeletedPayload } from '../../types';
+import type {
+  KafkaEvent,
+  FollowCreatedPayload,
+  FollowDeletedPayload,
+  UserCreatedPayload,
+  UserUpdatedPayload,
+} from '../../types';
 
 export async function handleUserEvent(event: KafkaEvent): Promise<void> {
   const label = { topic: 'user_events', event_type: event.type };
 
   try {
     switch (event.type) {
+      case 'user_created':
+        await onUserCreated(event);
+        metrics.incrementCounter('kafka_message_processed', { ...label, status: 'success' });
+        break;
+
+      case 'user_updated':
+        await onUserUpdated(event);
+        metrics.incrementCounter('kafka_message_processed', { ...label, status: 'success' });
+        break;
+
       case 'user_deleted':
         await onUserDeleted(event);
         metrics.incrementCounter('kafka_message_processed', { ...label, status: 'success' });
@@ -33,18 +53,48 @@ export async function handleUserEvent(event: KafkaEvent): Promise<void> {
         metrics.incrementCounter('kafka_message_processed', { ...label, status: 'success' });
         break;
 
-      case 'user_updated':
-        // No feed action needed for profile updates
+      default:
+        // user_updated events like message_sent, data_exported, etc. are irrelevant here
         metrics.incrementCounter('kafka_message_processed', { ...label, status: 'skipped' });
         break;
-
-      default:
-        logger.warn('Unknown user event type', { type: event.type });
     }
   } catch (err) {
     logger.error('Error handling user event', { event, err });
     metrics.incrementCounter('kafka_message_processed', { ...label, status: 'error' });
   }
+}
+
+async function onUserCreated(event: KafkaEvent): Promise<void> {
+  // The event is published flat (not nested in payload) by UserProducer
+  const data = event as unknown as UserCreatedPayload & { userId: string };
+  const userId = data.userId ?? event.entityId ?? event.userId;
+
+  await storeService.saveUserProfile({
+    id: userId,
+    username: data.username ?? '',
+    displayName: data.display_name ?? data.username ?? '',
+    avatarUrl: data.avatar_url ?? null,
+    verified: data.verified ?? false,
+  });
+
+  logger.info('user_created — profile cached', { userId });
+}
+
+async function onUserUpdated(event: KafkaEvent): Promise<void> {
+  // UserProducer publishes user_updated flat (not in payload)
+  const data = event as unknown as UserUpdatedPayload & { userId: string };
+  const userId = data.userId ?? event.entityId ?? event.userId;
+
+  await storeService.saveUserProfile({
+    id: userId,
+    username: data.username ?? '',
+    displayName: data.display_name ?? '',
+    avatarUrl: data.avatar_url ?? null,
+    verified: data.verified ?? false,
+    bio: data.bio,
+  });
+
+  logger.info('user_updated — profile refreshed in cache', { userId });
 }
 
 async function onUserDeleted(event: KafkaEvent): Promise<void> {
@@ -58,14 +108,15 @@ async function onUserDeleted(event: KafkaEvent): Promise<void> {
   const { followerIds } = await fetchFollowerIds(userId);
 
   if (postIds.length > 0 && followerIds.length > 0) {
-    await feedService.removePostFromFeeds(followerIds, postIds[0]);
-    // For multiple post IDs we batch-remove
     for (const postId of postIds) {
       await feedService.removePostFromFeeds(followerIds, postId);
     }
   }
 
-  logger.info('user_deleted — feed cleared', { userId });
+  // Remove the user's profile from the denormalized store
+  await storeService.deleteUserProfile(userId);
+
+  logger.info('user_deleted — feed and profile cleared', { userId });
 }
 
 async function onFollowCreated(event: KafkaEvent): Promise<void> {
@@ -78,7 +129,6 @@ async function onFollowCreated(event: KafkaEvent): Promise<void> {
 
   const nowMs = Date.now();
   for (let i = 0; i < postIds.length; i++) {
-    // Give older posts a slightly lower score based on assumed age
     const score = feedService.calculateScore(nowMs - i * 60_000);
     await feedService.addPostToFeed(followerId, postIds[i], score);
   }
@@ -91,7 +141,6 @@ async function onFollowDeleted(event: KafkaEvent): Promise<void> {
   const followerId = event.userId;
   const unfollowedId = payload.followingId;
 
-  // Fetch recent posts by the unfollowed user and remove them from the follower's feed
   const postIds = await fetchUserRecentPostIds(unfollowedId, 200);
 
   if (postIds.length > 0) {

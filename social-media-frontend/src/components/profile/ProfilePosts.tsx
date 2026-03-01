@@ -26,7 +26,7 @@ export const ProfilePosts: React.FC<ProfilePostsProps> = ({ posts }) => {
           {post.media_urls && post.media_urls.length > 0 && (
             <div className={styles.media}>
               <img
-                src={post.media_urls[0].replace('urn:storage:', 'http://minio:9000/media/')}
+                src={post.media_urls[0]}
                 alt=""
                 className={styles.image}
                 loading="lazy"

@@ -18,6 +18,8 @@ import { getRedisClient } from '../config/redis';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 import { metrics } from '../utils/metrics';
+import { storeService } from './store.service';
+import { fetchUserProfilesByIds } from './http.service';
 import type { FeedEntry, FeedItem } from '../types';
 
 // Max engagement boost in milliseconds (1 day)
@@ -306,17 +308,125 @@ export class FeedService {
   }
 
   /**
-   * Hydrate feed entries with full post details via HTTP call to post-service.
-   * Returns only the entries for which data was successfully retrieved.
+   * Hydrate feed entries with full post details and author info.
+   *
+   * Data is read entirely from Redis (denormalized by Kafka consumers) —
+   * zero downstream HTTP calls on the read path.
+   *
+   * Strategy:
+   *  1. Batch-fetch all post hashes from Redis (post_data:{postId}).
+   *  2. Collect unique author IDs from the fetched posts.
+   *  3. Batch-fetch all user profile hashes from Redis (user_profile:{userId}).
+   *  4. Assemble FeedItem objects.
+   *
+   * Posts missing from Redis (deleted, never stored) are silently dropped.
    */
   async hydrateFeedEntries(entries: FeedEntry[]): Promise<FeedItem[]> {
     if (entries.length === 0) return [];
 
-    const items: FeedItem[] = entries.map((e) => ({ ...e }));
+    const postIds = entries.map((e) => e.postId);
 
-    // In a real scenario this would call POST_SERVICE_URL/api/v1/posts?ids=...
-    // For testability, the actual HTTP call is extracted so it can be mocked.
+    // Step 1 — batch read post hashes from Redis
+    const postMap = await storeService.getPosts(postIds);
+
+    if (postMap.size === 0) {
+      logger.warn('hydrateFeedEntries: no post data found in Redis', { count: postIds.length });
+      return [];
+    }
+
+    // Step 2 — collect unique author IDs from the posts we found
+    const authorIds = [...new Set([...postMap.values()].map((p) => p.userId))];
+
+    // Step 3 — batch read user profile hashes from Redis
+    let userMap = await storeService.getUserProfiles(authorIds);
+
+    // Step 3b — FALLBACK: for any author missing from Redis, fetch from user-service
+    //            and write-through to Redis so the next request is cache-only.
+    //            This covers users who registered before the denormalization system
+    //            was introduced (no user_created event ever stored their profile).
+    const missingAuthorIds = authorIds.filter((id) => !userMap.has(id));
+    if (missingAuthorIds.length > 0) {
+      logger.info('hydrateFeedEntries: profiles missing from Redis, fetching via HTTP', {
+        missing: missingAuthorIds.length,
+        total: authorIds.length,
+      });
+
+      const fetchedProfiles = await fetchUserProfilesByIds(missingAuthorIds);
+
+      if (fetchedProfiles.size > 0) {
+        // Write fetched profiles to Redis (non-blocking — fire and forget)
+        void Promise.allSettled(
+          [...fetchedProfiles.values()].map((profile) =>
+            storeService.saveUserProfile({
+              id: profile.id,
+              username: profile.username,
+              displayName: profile.displayName,
+              avatarUrl: profile.avatarUrl || null,
+              verified: profile.verified === '1',
+              bio: profile.bio,
+            }),
+          ),
+        ).then(() => {
+          logger.debug('hydrateFeedEntries: wrote fallback profiles to Redis', {
+            count: fetchedProfiles.size,
+          });
+        });
+
+        // Merge fetched into the userMap for this request
+        userMap = new Map([...userMap, ...fetchedProfiles]);
+      }
+    }
+
+    // Step 4 — assemble FeedItems
+    const items: FeedItem[] = [];
+    for (const entry of entries) {
+      const stored = postMap.get(entry.postId);
+      if (!stored) continue; // post deleted or evicted — skip
+
+      const storedUser = userMap.get(stored.userId);
+
+      items.push({
+        postId: entry.postId,
+        score: entry.score,
+        post: {
+          id: stored.id,
+          userId: stored.userId,
+          content: stored.content,
+          imageUrl: this.parseJsonArray(stored.mediaUrls)[0] ?? null,
+          imageType: this.parseJsonArray(stored.mediaTypes)[0] ?? null,
+          mediaUrls: this.parseJsonArray(stored.mediaUrls),
+          mediaTypes: this.parseJsonArray(stored.mediaTypes),
+          visibility: stored.visibility,
+          likeCount: parseInt(stored.likeCount ?? '0', 10),
+          commentCount: parseInt(stored.commentCount ?? '0', 10),
+          shareCount: parseInt(stored.shareCount ?? '0', 10),
+          publishedAt: stored.publishedAt,
+          createdAt: stored.createdAt,
+          author: storedUser
+            ? {
+                id: storedUser.id,
+                username: storedUser.username,
+                displayName: storedUser.displayName,
+                avatarUrl: storedUser.avatarUrl || null,
+                verified: storedUser.verified === '1',
+              }
+            : null,
+        },
+      });
+    }
+
     return items;
+  }
+
+  /** Safe JSON.parse for stored arrays */
+  private parseJsonArray(raw: string | undefined): string[] {
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   }
 }
 

@@ -167,6 +167,18 @@ export class FollowerModel {
   }
 
   /**
+   * Get ALL follower IDs for a user — no pagination, used for fan-out.
+   */
+  async getAllFollowerIds(userId: string): Promise<string[]> {
+    const db = getDatabase();
+    const rows = await db(this.table)
+      .where({ following_id: userId })
+      .select('follower_id')
+      .orderBy('created_at', 'desc');
+    return rows.map((r: { follower_id: string }) => r.follower_id);
+  }
+
+  /**
    * Get follower relationship details
    */
   async getRelationship(followerId: string, followingId: string): Promise<Follower | null> {

@@ -29,7 +29,7 @@ export default function PostCard({ post }: { post: any }) {
         <div>
           
           {post.media_urls.map((u: string) => (
-            <img key={u} src={u.replace('urn:storage:', 'http://minio:9000/media/')} alt="media" style={{ maxWidth: '100%', marginTop: 6 }} />
+            <img key={u} src={u} alt="media" style={{ maxWidth: '100%', marginTop: 6 }} />
           ))}
         </div>
       )}

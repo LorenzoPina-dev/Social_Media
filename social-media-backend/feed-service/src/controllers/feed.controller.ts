@@ -23,7 +23,7 @@ export class FeedController {
 
       const { entries, nextCursor, hasMore } = await feedService.getFeed(userId, cursor, limit);
 
-      // Hydrate entries with post details (service returns lightweight items for now)
+      // Hydrate entries: batch-fetch posts + authors from downstream services
       const items = await feedService.hydrateFeedEntries(entries);
 
       logger.info('Feed fetched', { userId, count: items.length, hasMore });

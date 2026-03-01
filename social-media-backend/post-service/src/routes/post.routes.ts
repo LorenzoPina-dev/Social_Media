@@ -14,6 +14,10 @@ import { createPostLimiter, feedLimiter } from '../middleware/rateLimiter';
 const uuidParam = Joi.object({ id: Joi.string().uuid().required() });
 const userIdParam = Joi.object({ userId: Joi.string().uuid().required() });
 
+const batchPostsSchema = Joi.object({
+  ids: Joi.array().items(Joi.string().uuid()).min(1).max(100).required(),
+});
+
 const createPostSchema = Joi.object({
   content: Joi.string().min(1).max(2000).required().messages({
     'string.min': 'Content cannot be empty',
@@ -47,6 +51,14 @@ export function setupPostRoutes(postController: PostController): Router {
 
   // Istanza del limiter creata qui — viene chiamata dopo connectRedis() (da setupRoutes → createApp)
   const postLimiter = createPostLimiter();
+
+  // Batch fetch by IDs — DEVE stare prima di /:id
+  router.post(
+    '/batch',
+    requireAuth,
+    validateBody(batchPostsSchema),
+    postController.getByIds.bind(postController),
+  );
 
   // Trending hashtags — prima di /:id per evitare conflitti
   router.get(

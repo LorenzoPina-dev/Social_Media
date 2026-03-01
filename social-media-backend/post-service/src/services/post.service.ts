@@ -198,7 +198,7 @@ export class PostService {
     query: ListPostsQuery,
   ): Promise<CursorPage<Post>> {
     const limit = Math.min(query.limit || config.PAGINATION.DEFAULT_PAGE_SIZE, config.PAGINATION.MAX_PAGE_SIZE);
-    const includePrivate = userId === requesterId;
+    const isOwn = userId === requesterId;
 
     let cursor: CursorData | undefined;
     if (query.cursor) {
@@ -209,7 +209,19 @@ export class PostService {
       }
     }
 
-    const posts = await this.postModel.findByUserId(userId, { cursor, limit: limit + 1, includePrivate });
+    // Determina la visibilità in base alla relazione requester → userId
+    let visibility: 'all' | 'public_only' | 'follower' = 'public_only';
+    if (isOwn) {
+      visibility = 'all'; // profilo proprio: tutti i post inclusi PRIVATE
+    } else if (requesterId && this.userServiceClient) {
+      // Controlla se requesterId segue userId (presente nella lista following)
+      const followingIds = await this.userServiceClient.getFollowingIds(requesterId);
+      if (followingIds.includes(userId)) {
+        visibility = 'follower'; // PUBLIC + FOLLOWERS
+      }
+    }
+
+    const posts = await this.postModel.findByUserId(userId, { cursor, limit: limit + 1, visibility });
     const hasMore = posts.length > limit;
     const data = hasMore ? posts.slice(0, limit) : posts;
 
@@ -282,6 +294,17 @@ export class PostService {
   }
 
   // ─── ADMIN / CONSUMER ────────────────────────────────────────────────────
+
+  // ─── BATCH GET ─────────────────────────────────────────────────────────────
+
+  /**
+   * Fetch multiple posts by IDs in a single DB query.
+   * Used by feed-service for hydration.
+   */
+  async getPostsByIds(ids: string[]): Promise<Post[]> {
+    if (ids.length === 0) return [];
+    return this.postModel.findByIds(ids);
+  }
 
   async deleteAllPostsByUser(userId: string): Promise<void> {
     const count = await this.postModel.softDeleteAllByUser(userId);

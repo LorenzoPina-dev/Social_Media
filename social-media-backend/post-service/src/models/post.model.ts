@@ -59,6 +59,13 @@ export class PostModel {
     options: {
       cursor?: CursorData;
       limit?: number;
+      /**
+       * true  → profilo proprio (mostra tutti: PUBLIC, FOLLOWERS, PRIVATE)
+       * false → non autenticato o non-follower (solo PUBLIC)
+       * 'follower' → visitatore che segue l'utente (PUBLIC + FOLLOWERS)
+       */
+      visibility?: 'all' | 'public_only' | 'follower';
+      /** @deprecated usa `visibility` */
       includePrivate?: boolean;
     } = {},
   ): Promise<Post[]> {
@@ -69,13 +76,19 @@ export class PostModel {
       .where({ user_id: userId })
       .whereNull('deleted_at')
       .where('is_scheduled', false)
+      .whereNot('moderation_status', 'REJECTED')
       .orderBy('created_at', 'desc')
       .orderBy('id', 'desc')
       .limit(limit);
 
-    if (!options.includePrivate) {
+    // Determina le visibilità da mostrare
+    const vis = options.visibility ?? (options.includePrivate ? 'all' : 'public_only');
+    if (vis === 'public_only') {
+      query = query.where('visibility', 'PUBLIC');
+    } else if (vis === 'follower') {
       query = query.whereIn('visibility', ['PUBLIC', 'FOLLOWERS']);
     }
+    // vis === 'all' → nessun filtro aggiuntivo
 
     if (options.cursor) {
       query = query.where(function () {

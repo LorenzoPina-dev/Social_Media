@@ -1,105 +1,291 @@
-.post {
+/* ── Card container ───────────────────────────────────────────────────────── */
+.card {
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
-  border-radius: var(--space-3);
+  border-radius: 16px;
   margin-bottom: var(--space-4);
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-fast) var(--ease-out);
 }
 
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
 .header {
-  padding: var(--space-3);
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-.userInfo {
-  display: flex;
-  align-items: center;
+  padding: 12px 14px 10px;
   gap: var(--space-2);
 }
 
-.userDetails {
-  display: flex;
-  flex-direction: column;
-}
-
-.username {
-  font-weight: 600;
-  color: var(--text-primary);
-  text-decoration: none;
+.authorLink {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+  flex: 1;
+  min-width: 0;
 }
 
-.username:hover {
+.authorLink:hover .displayName {
   text-decoration: underline;
 }
 
+.avatar {
+  flex-shrink: 0;
+}
+
+.authorInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.displayName {
+  font-weight: 700;
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .verifiedBadge {
-  color: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.username {
   font-size: var(--font-xs);
+  color: var(--text-secondary);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
 }
 
 .timestamp {
   font-size: var(--font-xs);
   color: var(--text-secondary);
+  white-space: nowrap;
 }
 
-.media {
+/* ── Media ────────────────────────────────────────────────────────────────── */
+.mediaWrapper {
   width: 100%;
-  max-height: 600px;
+  background: var(--bg-tertiary);
+  overflow: hidden;
+  /* Aspect ratio simile a Instagram: 4:3 o auto */
+  max-height: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mediaImage {
+  width: 100%;
+  height: 100%;
+  max-height: 500px;
   object-fit: cover;
+  display: block;
 }
 
-.content {
-  padding: var(--space-3);
+/* ── Actions bar ──────────────────────────────────────────────────────────── */
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px 4px;
 }
 
-.content p {
-  margin-bottom: var(--space-2);
-  line-height: 1.5;
+.actionsLeft {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.actionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 50%;
   color: var(--text-primary);
+  transition: color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
+  text-decoration: none;
+  padding: 0;
+}
+
+.actionBtn:hover {
+  background: var(--bg-tertiary);
+  transform: scale(1.1);
+}
+
+.actionBtn:active {
+  transform: scale(0.92);
+}
+
+.actionIcon {
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
+}
+
+/* Like active state */
+.liked {
+  color: var(--danger);
+  animation: likePopup var(--transition-base) var(--ease-out);
+}
+
+@keyframes likePopup {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.3); }
+  70%  { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+/* Save active state */
+.saved {
+  color: var(--text-primary);
+}
+
+/* Comment active (sezione aperta) */
+.activeComment {
+  color: var(--primary);
+}
+
+/* Contenitore commenti inline */
+.commentsContainer {
+  border-top: 1px solid var(--border-color);
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+/* ── Like count ───────────────────────────────────────────────────────────── */
+.likeCount {
+  padding: 2px 14px 0;
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.likeCount strong {
+  font-weight: 700;
+}
+
+/* ── Content ──────────────────────────────────────────────────────────────── */
+.content {
+  padding: 4px 14px 6px;
+}
+
+.text {
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  line-height: 1.5;
+  margin: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
+
+  /* Tronca a 3 righe, clicca per espandere (futuro) */
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.authorInline {
+  font-weight: 700;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.authorInline:hover {
+  text-decoration: underline;
 }
 
 .hashtags {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: 4px;
+  margin-top: 4px;
 }
 
 .hashtag {
   color: var(--primary);
-  text-decoration: none;
   font-size: var(--font-sm);
+  text-decoration: none;
+  font-weight: 500;
 }
 
 .hashtag:hover {
   text-decoration: underline;
 }
 
-.stats {
-  padding: 0 var(--space-3) var(--space-2);
-  display: flex;
-  gap: var(--space-4);
+/* ── Comments link ────────────────────────────────────────────────────────── */
+.commentsLink {
+  display: block;
+  width: 100%;
+  padding: 0 14px 4px;
   font-size: var(--font-sm);
   color: var(--text-secondary);
-}
-
-.likeCount {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.commentCount {
+  text-decoration: none;
+  text-align: left;
   background: none;
   border: none;
-  color: var(--text-secondary);
   cursor: pointer;
-  font-size: var(--font-sm);
+  line-height: 1.6;
 }
 
-.commentCount:hover {
+.commentsLink:hover {
   color: var(--text-primary);
+}
+
+/* ── Share count ──────────────────────────────────────────────────────────── */
+.shareCount {
+  padding: 0 14px 10px;
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .card {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    margin-bottom: var(--space-2);
+  }
+
+  .mediaWrapper {
+    max-height: 360px;
+  }
 }

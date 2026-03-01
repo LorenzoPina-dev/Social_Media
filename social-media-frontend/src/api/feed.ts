@@ -1,9 +1,15 @@
 import { apiClient } from './client';
-import { FeedResponse, TrendingFeedResponse } from '@/types/feed.types';
+import { FeedResponse, TrendingFeedResponse, FeedServiceResponse } from '@/types/feed.types';
 import { CursorParams } from '@/types/api.types';
 
+/** Feed-service personalised feed — returns hydrated FeedItems with author + post data */
+export const getPersonalisedFeed = async (params?: { cursor?: string; limit?: number }) => {
+  return apiClient.get<FeedServiceResponse>('/api/v1/feed', { params });
+};
+
+/** Legacy feed via post-service (kept for compatibility) */
 export const getFeed = async (params?: CursorParams) => {
-  return apiClient.get<FeedResponse>('/api/v1/feed/', { params });
+  return apiClient.get<FeedResponse>('/api/v1/posts/feed', { params });
 };
 
 export const getUserFeed = async (userId: string, params?: CursorParams) => {

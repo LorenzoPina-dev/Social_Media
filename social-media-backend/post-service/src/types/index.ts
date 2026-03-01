@@ -159,6 +159,13 @@ export interface PostCreatedEvent extends BaseKafkaEvent {
     hashtags: string[];
     visibility: PostVisibility;
     moderation_status: ModerationStatus;
+    media_urls: string[];
+    media_types: string[];
+    like_count: number;
+    comment_count: number;
+    share_count: number;
+    published_at: string;
+    created_at: string;
   };
 }
 
@@ -167,6 +174,8 @@ export interface PostUpdatedEvent extends BaseKafkaEvent {
   payload: {
     content?: string;
     visibility?: PostVisibility;
+    media_urls?: string[];
+    media_types?: string[];
   };
 }
 

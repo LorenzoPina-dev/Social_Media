@@ -1,10 +1,17 @@
 import { useFeed } from '@/hooks/useFeed';
+import { useAuth } from '@/hooks/useAuth';
+import { useModal } from '@/contexts/ModalContext';
+import { CreatePostModal } from '@/components/post/CreatePost/CreatePostModal';
+import { Avatar } from '@/components/common/Avatar/Avatar';
 import { FeedPost } from './FeedPost';
 import { FeedSkeleton } from './FeedSkeleton';
 import { EmptyFeed } from './EmptyFeed';
 import styles from './Feed.module.css';
 
 export const Feed = () => {
+  const { user } = useAuth();
+  const { openModal } = useModal();
+
   const {
     posts,
     isLoading,
@@ -12,9 +19,21 @@ export const Feed = () => {
     hasMore,
     lastElementRef,
     refresh,
-    updatePost,
     removePost,
   } = useFeed();
+
+  const handleOpenComposer = () => {
+    openModal(
+      'create-post',
+      <CreatePostModal
+        isOpen={true}
+        onClose={() => {}}
+        onSuccess={() => {
+          window.dispatchEvent(new CustomEvent('feed:refresh'));
+        }}
+      />
+    );
+  };
 
   if (error) {
     return (
@@ -27,27 +46,48 @@ export const Feed = () => {
     );
   }
 
-  if (!isLoading && posts.length === 0) {
-    return <EmptyFeed />;
-  }
-
   return (
     <div className={styles.feed}>
-      {posts.map((post, index) => (
+      {/* ── Composer inline ── */}
+      <div className={styles.composer} onClick={handleOpenComposer}>
+        <Avatar
+          src={user?.avatar_url}
+          username={user?.username}
+          size="small"
+          className={styles.composerAvatar}
+        />
+        <div className={styles.composerInput}>
+          <span className={styles.composerPlaceholder}>
+            Cosa stai pensando, {user?.display_name || user?.username}?
+          </span>
+        </div>
+        <button className={styles.composerBtn} type="button">
+          Pubblica
+        </button>
+      </div>
+
+      {/* ── Skeleton iniziale ── */}
+      {isLoading && posts.length === 0 && <FeedSkeleton count={3} />}
+
+      {/* ── Empty state ── */}
+      {!isLoading && posts.length === 0 && <EmptyFeed />}
+
+      {/* ── Post list ── */}
+      {posts.map((item, index) => (
         <FeedPost
-          key={post.id}
-          post={post}
+          key={item.postId}
+          item={item}
           ref={index === posts.length - 1 ? lastElementRef : null}
-          onUpdate={(updates) => updatePost(post.id, updates)}
-          onDelete={() => removePost(post.id)}
+          onDelete={() => removePost(item.postId)}
         />
       ))}
-      
-      {isLoading && <FeedSkeleton count={2} />}
-      
+
+      {/* ── Caricamento pagina successiva ── */}
+      {isLoading && posts.length > 0 && <FeedSkeleton count={2} />}
+
       {!hasMore && posts.length > 0 && (
         <div className={styles.endMessage}>
-          Non ci sono altri post da mostrare
+          Hai visto tutti i post — sei aggiornato! 🎉
         </div>
       )}
     </div>

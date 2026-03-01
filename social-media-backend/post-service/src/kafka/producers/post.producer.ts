@@ -40,6 +40,14 @@ export class PostProducer {
         hashtags,
         visibility: post.visibility,
         moderation_status: post.moderation_status,
+        // Full data needed for feed denormalization
+        media_urls: post.media_urls ?? [],
+        media_types: post.media_types ?? [],
+        like_count: post.like_count,
+        comment_count: post.comment_count,
+        share_count: post.share_count,
+        published_at: post.published_at?.toISOString() ?? new Date().toISOString(),
+        created_at: post.created_at.toISOString(),
       },
     };
     await this.publish(post.user_id, event);
@@ -52,7 +60,13 @@ export class PostProducer {
       entityId: post.id,
       userId: post.user_id,
       timestamp: new Date().toISOString(),
-      payload: { content: post.content, visibility: post.visibility },
+      payload: {
+        content: post.content,
+        visibility: post.visibility,
+        // Include media in case it was edited
+        media_urls: post.media_urls ?? [],
+        media_types: post.media_types ?? [],
+      },
     };
     await this.publish(post.user_id, event);
   }

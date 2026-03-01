@@ -118,7 +118,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const uploadPendingFiles = async (): Promise<{ media_urls: string[], media_types: string[] }> => {
     const uploaded = files.filter(f => f.uploaded);
     const pending = files.filter(f => !f.uploaded);
-    const media_urls: string[] = uploaded.map(f => `urn:storage:${f.storageKey!}`);
+    const media_urls: string[] = uploaded.map(f => `http://minio:9000/media/${f.storageKey!}`);
     const media_types: string[] = uploaded.map(f => f.mediaType!.split('/')[0]); // 'image/jpeg' -> 'image'
 
     for (const entry of pending) {
@@ -132,7 +132,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         setFiles(prev =>
           prev.map(f => f.previewUrl === entry.previewUrl ? { ...f, progress: 100, uploaded: true, mediaId, storageKey, mediaType } : f)
         );
-        media_urls.push(`urn:storage:${storageKey}`); // Trasforma la chiave in un URN valido
+        media_urls.push(`http://minio:9000/media/${storageKey}`); // Trasforma la chiave in un URN valido
         media_types.push(mediaType.split('/')[0]);    // Trasforma 'image/jpeg' in 'image'
       } catch {
         setFiles(prev =>

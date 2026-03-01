@@ -3,8 +3,6 @@ import { Stories } from '@/components/feed/Stories';
 import { Suggestions } from '@/components/feed/Suggestions';
 import { TrendingHashtags } from '@/components/feed/TrendingHashtags';
 import { CreatePostModal } from '@/components/post/CreatePost/CreatePostModal';
-import PostComposer from '@/components/PostComposer';
-import PostList from '@/components/PostList';
 import { Avatar } from '@/components/common/Avatar/Avatar';
 import { useModal } from '@/contexts/ModalContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -55,16 +53,6 @@ const HomePage = () => {
     <div className={styles.homePage}>
       <div className={styles.mainContent}>
         <Stories />
-
-        {/* Demo composer/list (integrated) */}
-        <div style={{ marginBottom: 12 }}>
-          <PostComposer />
-        </div>
-
-        <div style={{ marginBottom: 12 }}>
-          {/* Replace with current user id or feed identifier as needed */}
-          <PostList userId={user?.id ?? ''} />
-        </div>
 
         <Feed />
       </div>

@@ -115,6 +115,21 @@ export class PostController {
   }
 
   /**
+   * POST /api/v1/posts/batch
+   * Returns multiple posts by IDs in a single call.
+   * Used internally by feed-service for hydration.
+   */
+  async getByIds(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { ids } = req.body as { ids: string[] };
+      const posts = await this.postService.getPostsByIds(ids);
+      ok(res, posts);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * GET /api/v1/posts/trending/hashtags
    */
   async getTrendingHashtags(req: Request, res: Response, next: NextFunction): Promise<void> {

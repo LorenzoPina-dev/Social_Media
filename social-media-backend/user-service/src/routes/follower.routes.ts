@@ -27,6 +27,13 @@ export function setupFollowerRoutes(
     followerController.unfollowUser.bind(followerController)
   );
 
+  // DEVE stare prima di /:id/followers per evitare conflitti
+  router.get(
+    '/:id/followers/ids',
+    optionalAuth,
+    followerController.getFollowerIds.bind(followerController)
+  );
+
   router.get(
     '/:id/followers',
     optionalAuth,

@@ -51,9 +51,19 @@ export interface Comment {
   deleted_at: Date | null;
 }
 
+export interface CommentUser {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  verified: boolean;
+}
+
 export interface CommentWithReplies extends Comment {
   replies_count: number;
   replies?: CommentWithReplies[];
+  is_liked: boolean;
+  user?: CommentUser;
 }
 
 export interface CreateCommentDto {

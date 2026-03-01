@@ -108,10 +108,10 @@ export function setupUserRoutes(userController: UserController): Router {
     userController.searchUsers.bind(userController)
   );
 
-  // Get users by ids (batch)
+  // Get users by ids (batch) — optionalAuth: used internally by feed-service
   router.post(
     '/batch',
-    requireAuth,
+    optionalAuth,
     validateBody(batchUsersSchema),
     userController.getUsersByIds.bind(userController)
   );

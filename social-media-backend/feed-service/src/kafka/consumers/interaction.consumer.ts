@@ -1,17 +1,22 @@
 /**
  * Interaction Events Consumer
  *
- * Handles like_created, share_created → boost post score in feeds.
- * like_deleted → reduce score (best-effort).
+ * Responsibilities:
+ *  - like_created   → boost post score in follower feed ZSETs
+ *                     + HINCRBY like_count in post_data hash
+ *  - like_deleted   → reduce score + HINCRBY -1
+ *  - share_created  → boost score + HINCRBY share_count
+ *  - comment_created → boost score + HINCRBY comment_count
  */
 
 import { feedService } from '../../services/feed.service';
+import { storeService } from '../../services/store.service';
 import { fetchFollowerIds } from '../../services/http.service';
 import { logger } from '../../utils/logger';
 import { metrics } from '../../utils/metrics';
-import type { KafkaEvent, LikeCreatedPayload, ShareCreatedPayload } from '../../types';
+import type { KafkaEvent, LikeCreatedPayload } from '../../types';
 
-// Engagement score deltas (must match calculateScore weights)
+// Feed score deltas (must match calculateScore weights in feed.service)
 const LIKE_DELTA = 10;
 const SHARE_DELTA = 30;
 const COMMENT_DELTA = 20;
@@ -42,8 +47,9 @@ export async function handleInteractionEvent(event: KafkaEvent): Promise<void> {
         break;
 
       case 'comment_deleted':
-        // Minor: reduce comment boost — skip for MVP
-        metrics.incrementCounter('kafka_message_processed', { ...label, status: 'skipped' });
+        // Decrement comment count in the denormalized store
+        await storeService.adjustPostCounter(event.entityId, 'commentCount', -1);
+        metrics.incrementCounter('kafka_message_processed', { ...label, status: 'success' });
         break;
 
       default:
@@ -62,26 +68,27 @@ async function onLikeCreated(event: KafkaEvent): Promise<void> {
   const postId = event.entityId;
   const { followerIds } = await fetchFollowerIds(event.userId);
 
-  // Boost the post in all follower feeds where it already exists
+  // Boost ranking score in feed ZSETs
   await feedService.boostPostInFeeds(followerIds, postId, LIKE_DELTA);
+
+  // Increment like counter in denormalized post data
+  await storeService.adjustPostCounter(postId, 'likeCount', 1);
 }
 
 async function onLikeDeleted(event: KafkaEvent): Promise<void> {
   const postId = event.entityId;
   const { followerIds } = await fetchFollowerIds(event.userId);
 
-  // Reduce score (negative delta)
   await feedService.boostPostInFeeds(followerIds, postId, -LIKE_DELTA);
+  await storeService.adjustPostCounter(postId, 'likeCount', -1);
 }
 
 async function onShareCreated(event: KafkaEvent): Promise<void> {
-  const payload = event.payload as unknown as ShareCreatedPayload;
-  void payload; // used for type check only
-
   const postId = event.entityId;
   const { followerIds } = await fetchFollowerIds(event.userId);
 
   await feedService.boostPostInFeeds(followerIds, postId, SHARE_DELTA);
+  await storeService.adjustPostCounter(postId, 'shareCount', 1);
 }
 
 async function onCommentCreated(event: KafkaEvent): Promise<void> {
@@ -89,4 +96,5 @@ async function onCommentCreated(event: KafkaEvent): Promise<void> {
   const { followerIds } = await fetchFollowerIds(event.userId);
 
   await feedService.boostPostInFeeds(followerIds, postId, COMMENT_DELTA);
+  await storeService.adjustPostCounter(postId, 'commentCount', 1);
 }

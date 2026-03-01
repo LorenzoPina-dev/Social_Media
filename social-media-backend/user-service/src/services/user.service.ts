@@ -99,11 +99,14 @@ export class UserService {
       // Cache the new user
       await this.cacheService.setUser(user);
 
-      // Publish event
+      // Publish event with full profile for feed denormalization
       await this.userProducer.publishUserCreated({
         userId: user.id,
         username: user.username,
         email: user.email,
+        display_name: user.display_name,
+        avatar_url: user.avatar_url,
+        verified: user.verified,
         timestamp: new Date(),
       });
 
@@ -127,10 +130,14 @@ export class UserService {
       // Invalidate cache
       await this.cacheService.deleteUser(id);
 
-      // Publish event
+      // Publish full updated profile for feed denormalization
       await this.userProducer.publishUserUpdated({
         userId: id,
-        changes: data,
+        username: user.username,
+        display_name: user.display_name,
+        avatar_url: user.avatar_url,
+        bio: user.bio,
+        verified: user.verified,
         timestamp: new Date(),
       });
 

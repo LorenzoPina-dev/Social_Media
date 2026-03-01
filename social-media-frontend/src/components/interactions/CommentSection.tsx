@@ -9,11 +9,13 @@ import styles from './CommentSection.module.css';
 interface CommentSectionProps {
   postId: string;
   onClose?: () => void;
+  onCommentAdded?: () => void;
 }
 
 export const CommentSection: React.FC<CommentSectionProps> = ({
   postId,
   onClose,
+  onCommentAdded,
 }) => {
   const [replyTo, setReplyTo] = useState<{ id: string; username: string } | null>(null);
   const {
@@ -43,6 +45,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
     await addComment(content, replyTo?.id);
     setReplyTo(null);
     scrollToBottom();
+    onCommentAdded?.();
   };
 
   const handleReply = (commentId: string, username: string) => {
