@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Profile } from '@/types/user.types';
-import { getUserProfile, updateProfile, followUser, unfollowUser } from '@/api/users';
+import { getUserProfile, updateProfile } from '@/api/users';
 import { getUserPosts } from '@/api/posts';
 import { Post } from '@/types/post.types';
 import { useAuth } from './useAuth';
@@ -100,43 +100,31 @@ export const useProfile = (id?: string) => {
     [isOwnProfile, user, updateUser]
   );
 
-  const follow = useCallback(async () => {
+  // Questi callback vengono chiamati DOPO che FollowButton ha già eseguito la chiamata API.
+  // Aggiornano solo lo stato locale senza fare una seconda chiamata API.
+  const follow = useCallback(() => {
     if (!profile) return;
-
-    try {
-      await followUser(profile.id);
-      const followersCount =
-        (profile as any).followers_count ?? (profile as any).follower_count ?? 0;
-      setProfile({
-        ...profile,
-        is_following: true,
-        follower_count: followersCount + 1,
-        followers_count: followersCount + 1,
-      });
-      toast.success(`Ora segui ${profile.username}`);
-    } catch (err) {
-      // handled by button/toast at call site
-    }
+    const followersCount =
+      (profile as any).followers_count ?? (profile as any).follower_count ?? 0;
+    setProfile({
+      ...profile,
+      is_following: true,
+      follower_count: followersCount + 1,
+      followers_count: followersCount + 1,
+    });
   }, [profile]);
 
-  const unfollow = useCallback(async () => {
+  const unfollow = useCallback(() => {
     if (!profile) return;
-
-    try {
-      await unfollowUser(profile.id);
-      const followersCount =
-        (profile as any).followers_count ?? (profile as any).follower_count ?? 0;
-      const nextCount = Math.max(0, followersCount - 1);
-      setProfile({
-        ...profile,
-        is_following: false,
-        follower_count: nextCount,
-        followers_count: nextCount,
-      });
-      toast.success(`Non segui più ${profile.username}`);
-    } catch (err) {
-      // handled by button/toast at call site
-    }
+    const followersCount =
+      (profile as any).followers_count ?? (profile as any).follower_count ?? 0;
+    const nextCount = Math.max(0, followersCount - 1);
+    setProfile({
+      ...profile,
+      is_following: false,
+      follower_count: nextCount,
+      followers_count: nextCount,
+    });
   }, [profile]);
 
   return {

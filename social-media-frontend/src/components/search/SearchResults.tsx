@@ -16,7 +16,7 @@ interface SearchResultsProps {
   hashtags?: Hashtag[];
   isLoading?: boolean;
   onFollowChange?: (userId: string, isFollowing: boolean) => void;
-  onUserClick?: (username: string) => void;
+  onUserClick?: (id: string) => void;
   onPostClick?: (postId: string) => void;
   onHashtagClick?: (tag: string) => void;
 }
@@ -57,7 +57,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             <UserResult
               key={user.id}
               user={user}
-              onClick={() => onUserClick?.(user.username)}
+              onClick={() => onUserClick?.(user.id)}
               onFollow={() => onFollowChange?.(user.id, true)}
               onUnfollow={() => onFollowChange?.(user.id, false)}
             />

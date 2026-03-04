@@ -218,7 +218,7 @@ export const FeedPost = forwardRef<HTMLDivElement, FeedPostProps>(
       <article className={styles.card} ref={ref}>
         {/* ── Header ── */}
         <div className={styles.header}>
-          <Link to={`/profile/${username || post.userId}`} className={styles.authorLink}>
+          <Link to={`/profile/${post.userId}`} className={styles.authorLink}>
             <Avatar
               src={avatarUrl}
               username={username}
@@ -379,7 +379,7 @@ export const FeedPost = forwardRef<HTMLDivElement, FeedPostProps>(
         <div className={styles.content}>
           {contentWithoutTags && (
             <p className={styles.text}>
-              <Link to={`/profile/${username || post.userId}`} className={styles.authorInline}>
+              <Link to={`/profile/${post.userId}`} className={styles.authorInline}>
                 {displayName}
               </Link>{' '}
               {contentWithoutTags}

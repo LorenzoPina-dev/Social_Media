@@ -73,6 +73,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 initialFollowing={profile.is_following}
                 onFollow={onFollow}
                 onUnfollow={onUnfollow}
+                size={'large'}
               />
             )}
           </div>

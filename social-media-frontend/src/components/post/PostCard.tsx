@@ -52,7 +52,7 @@ export const PostCard: React.FC<PostCardProps> = ({
     <article className={styles.postCard}>
       <header className={styles.header}>
         <div className={styles.userInfo}>
-          <Link to={`/profile/${post.user.username}`} className={styles.avatarLink}>
+          <Link to={`/profile/${post.user.id}`} className={styles.avatarLink}>
             <Avatar
               src={post.user.avatar_url}
               username={post.user.username}
@@ -60,7 +60,7 @@ export const PostCard: React.FC<PostCardProps> = ({
             />
           </Link>
           <div className={styles.userDetails}>
-            <Link to={`/profile/${post.user.username}`} className={styles.username}>
+            <Link to={`/profile/${post.user.id}`} className={styles.username}>
               {post.user.username}
               {post.user.verified && (
                 <span className={styles.verifiedBadge}>✓</span>

@@ -1,52 +1,232 @@
 .explorePage {
-  display: grid;
-  gap: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
 }
 
 .title {
   margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text-primary, #111);
 }
 
-.tagFeed {
+/* ── Section titles ──────────────────────────────────────────────────────── */
+
+.sectionTitle {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #555);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* ── Grid ────────────────────────────────────────────────────────────────── */
+
+.grid {
   display: grid;
-  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+}
+
+@media (max-width: 480px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2px;
+  }
+}
+
+/* ── Tile ────────────────────────────────────────────────────────────────── */
+
+.tile {
+  position: relative;
+  display: block;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background: var(--color-surface-secondary, #f0f0f0);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  outline: none;
+}
+
+.tile:focus-visible {
+  outline: 2px solid var(--color-primary, #0095f6);
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+/* ── Media dentro il tile ────────────────────────────────────────────────── */
+
+.tileMedia {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.25s ease;
+}
+
+.tile:hover .tileMedia {
+  transform: scale(1.04);
+}
+
+/* ── Testo (post senza immagine) ─────────────────────────────────────────── */
+
+.tileText {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: var(--color-surface-secondary, #f7f7f7);
+  transition: background 0.2s;
+}
+
+.tile:hover .tileText {
+  background: var(--color-surface-hover, #ebebeb);
+}
+
+.tileTextContent {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--color-text-primary, #111);
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-align: center;
+}
+
+/* ── Overlay su hover (like + commenti) ──────────────────────────────────── */
+
+.tileOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background: rgba(0, 0, 0, 0.38);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.tile:hover .tileOverlay {
+  opacity: 1;
+}
+
+.tileStat {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0,0,0,.4);
+}
+
+.tileIcon {
+  width: 18px;
+  height: 18px;
+  fill: #fff;
+  flex-shrink: 0;
+}
+
+/* ── Badge video / multiplo ──────────────────────────────────────────────── */
+
+.videoIndicator,
+.multipleIndicator {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: rgba(0,0,0,.55);
+  border-radius: 4px;
+}
+
+.videoIndicator svg,
+.multipleIndicator svg {
+  width: 14px;
+  height: 14px;
+  fill: #fff;
+}
+
+/* ── Skeleton ─────────────────────────────────────────────────────────────── */
+
+.skeleton {
+  aspect-ratio: 1 / 1;
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-secondary, #ececec) 25%,
+    var(--color-surface-hover, #e0e0e0) 50%,
+    var(--color-surface-secondary, #ececec) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 2px;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 20px;
+  color: var(--color-text-secondary, #888);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.emptyIcon {
+  width: 48px;
+  height: 48px;
+  fill: var(--color-text-tertiary, #ccc);
+}
+
+/* ── Tag feed ─────────────────────────────────────────────────────────────── */
+
+.tagSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .tagTitle {
   margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-text-primary, #111);
+}
+
+.hashSign {
+  color: var(--color-primary, #0095f6);
 }
 
 .trending {
-  display: grid;
-  gap: 10px;
-}
-
-.trendingTitle {
-  margin: 0;
-}
-
-.trendingGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 8px;
-}
-
-.trendingItem {
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid var(--color-border, #e5e7eb);
-}
-
-.trendingImage {
-  display: block;
-  width: 100%;
-  height: 140px;
-  object-fit: cover;
+  display: flex;
+  flex-direction: column;
 }

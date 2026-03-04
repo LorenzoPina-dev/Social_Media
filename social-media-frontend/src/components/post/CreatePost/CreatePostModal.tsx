@@ -174,8 +174,10 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
       await createPost({
         ...data,
         content: finalContent,
-        media_urls: postMedia.media_urls,
-        media_types: postMedia.media_types as any,
+        ...(postMedia.media_urls.length > 0 && {
+          media_urls: postMedia.media_urls,
+          media_types: postMedia.media_types as any,
+        }),
       });
 
       toast.success('Post pubblicato!');

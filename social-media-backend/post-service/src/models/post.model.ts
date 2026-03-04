@@ -19,8 +19,8 @@ export class PostModel {
       .insert({
         user_id: userId,
         content: dto.content,
-        media_urls: dto.media_urls ? JSON.stringify(dto.media_urls) : null,
-        media_types: dto.media_types ? JSON.stringify(dto.media_types) : null,
+        media_urls: dto.media_urls ?? null,
+        media_types: dto.media_types ?? null,
         visibility: dto.visibility || 'PUBLIC',
         like_count: 0,
         comment_count: 0,

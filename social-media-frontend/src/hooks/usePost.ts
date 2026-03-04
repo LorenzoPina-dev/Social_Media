@@ -1,7 +1,9 @@
 import { useState, useCallback } from 'react';
 import { Post } from '@/types/post.types';
 import { getPost, createPost, updatePost, deletePost, savePost, unsavePost } from '@/api/posts';
+import { getUserProfile } from '@/api/users';
 import { unwrapData } from '@/api/envelope';
+import { Profile } from '@/types/user.types';
 import toast from 'react-hot-toast';
 
 export const usePost = (postId?: string) => {
@@ -12,13 +14,30 @@ export const usePost = (postId?: string) => {
 
   const fetchPost = useCallback(async () => {
     if (!postId) return;
-    
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const response = await getPost(postId);
-      setPost(unwrapData<Post>(response.data));
+      const rawPost = unwrapData<Post>(response.data);
+
+      // Il post-service non incorpora l'oggetto user — lo recuperiamo separatamente
+      if (rawPost && !rawPost.user && rawPost.user_id) {
+        try {
+          const userResponse = await getUserProfile(rawPost.user_id);
+          const userProfile = unwrapData<Profile>(userResponse.data);
+          setPost({ ...rawPost, user: userProfile });
+        } catch {
+          // Se il profilo non è disponibile, usiamo un fallback
+          setPost({
+            ...rawPost,
+            user: { id: rawPost.user_id, username: 'utente', avatar_url: undefined } as any,
+          });
+        }
+      } else {
+        setPost(rawPost);
+      }
     } catch (err) {
       setError(err as Error);
     } finally {

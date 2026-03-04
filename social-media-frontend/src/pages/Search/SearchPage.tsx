@@ -50,7 +50,7 @@ const SearchPage = () => {
           hashtags={hashtags}
           isLoading={isLoading}
           onFollowChange={setUserFollowState}
-          onUserClick={(username) => navigate(`/profile/${username}`)}
+          onUserClick={(id) => navigate(`/profile/${id}`)}
           onPostClick={(postId) => navigate(`/p/${postId}`)}
           onHashtagClick={(tag) => navigate(`/explore/tags/${tag}`)}
         />
