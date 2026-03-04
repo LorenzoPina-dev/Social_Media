@@ -7,6 +7,10 @@
   color: var(--text-secondary);
 }
 
+.active {
+  color: var(--primary, #0095f6);
+}
+
 .count {
   position: absolute;
   top: -4px;

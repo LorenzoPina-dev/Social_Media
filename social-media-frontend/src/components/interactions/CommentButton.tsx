@@ -4,22 +4,34 @@ import styles from './CommentButton.module.css';
 interface CommentButtonProps {
   onClick?: () => void;
   count?: number;
+  active?: boolean;
 }
 
 export const CommentButton: React.FC<CommentButtonProps> = ({
   onClick,
   count,
+  active = false,
 }) => {
   return (
     <div className={styles.container}>
       <IconButton
         onClick={onClick}
         label="Commenta"
-        className={styles.commentButton}
+        className={`${styles.commentButton} ${active ? styles.active : ''}`}
       >
-        <svg viewBox="0 0 24 24">
-          <path d="M21 6h-2v2h-2V6h-2V4h2V2h2v2h2v2zm-6-4v2h-2V2h2zm0 8h-2v2h2v-2zm-2-4h2v2h-2V6zm4 4h-2v2h2v-2zm-8-4h2v2h-2V6zm8 10c0 1.1-.9 2-2 2h-1c0 1.66-1.34 3-3 3s-3-1.34-3-3H7c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2h5v2H7v10h10v-3h2v3z"/>
-        </svg>
+            <svg
+                viewBox="0 0 24 24"
+                className={styles.actionIcon}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                />
+              </svg>
       </IconButton>
       {count !== undefined && count > 0 && (
         <span className={styles.count}>{count}</span>

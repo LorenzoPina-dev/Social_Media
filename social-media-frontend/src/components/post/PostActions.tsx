@@ -14,6 +14,7 @@ interface PostActionsProps {
   onSaveUpdate?: (saved: boolean) => void;
   onCommentClick?: () => void;
   onShareClick?: () => void;
+  commentsOpen?: boolean;
 }
 
 export const PostActions: React.FC<PostActionsProps> = ({
@@ -25,6 +26,7 @@ export const PostActions: React.FC<PostActionsProps> = ({
   onSaveUpdate,
   onCommentClick,
   onShareClick,
+  commentsOpen,
 }) => {
   const [liked, setLiked] = useState(initialLiked);
   const [saved, setSaved] = useState(initialSaved);
@@ -50,7 +52,7 @@ export const PostActions: React.FC<PostActionsProps> = ({
           initialLiked={liked}
           onLike={handleLike}
         />
-        <CommentButton onClick={onCommentClick} />
+        <CommentButton onClick={onCommentClick} active={commentsOpen} />
         <ShareButton postId={postId} onShare={onShareClick} />
       </div>
       

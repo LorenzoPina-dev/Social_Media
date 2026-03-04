@@ -1,47 +1,34 @@
-import { useParams } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { PostCard } from '@/components/post/PostCard';
-import { CommentSection } from '@/components/interactions/CommentSection';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { usePost } from '@/hooks/usePost';
+import { FeedPost } from '@/components/feed/FeedPost';
 import { PageLoader } from '@/components/common/Loading/PageLoader';
 import { NotFound } from '@/components/common/Error/NotFound';
+import { postToFeedItem } from '@/utils/postAdapter';
 import styles from './PostDetailPage.module.css';
 
 const PostDetailPage = () => {
   const { postId } = useParams<{ postId: string }>();
   const { post, isLoading, fetchPost } = usePost(postId);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (postId) {
-      fetchPost();
-    }
+    if (postId) fetchPost();
   }, [postId]);
 
-  if (isLoading) {
-    return <PageLoader />;
-  }
-
-  if (!post) {
-    return <NotFound />;
-  }
+  if (isLoading) return <PageLoader />;
+  if (!post)     return <NotFound />;
 
   return (
-    <div className={styles.postDetailPage}>
+    <div className={styles.page}>
       <div className={styles.container}>
-        <PostCard
-          post={post}
-          onLike={() => fetchPost()}
-          onComment={() => {}}
-          onShare={() => {}}
-          onSave={() => fetchPost()}
+        <FeedPost
+          item={postToFeedItem(post)}
+          onDelete={() => navigate(-1)}
         />
-        
-        <div className={styles.commentsSection}>
-          <CommentSection postId={post.id} />
-        </div>
       </div>
     </div>
   );
 };
 
-export default PostDetailPage
+export default PostDetailPage;

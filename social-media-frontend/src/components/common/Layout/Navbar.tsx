@@ -103,7 +103,7 @@ export const Navbar = () => {
                 {showMenu && (
                   <div className={styles.dropdown}>
                     <Link
-                      to={`/profile/${user?.username}`}
+                      to={`/profile/${user?.id}`}
                       className={styles.dropdownItem}
                       onClick={() => setShowMenu(false)}
                     >
