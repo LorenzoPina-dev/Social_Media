@@ -51,13 +51,7 @@ export class CommentModel {
   private readonly closureTable = 'comment_closure';
 
   /** Columns we always select — comments.* plus aliased user columns */
-  private commentSelect = [
-    'comments.*',
-    'users.username        as u_username',
-    'users.display_name    as u_display_name',
-    'users.avatar_url      as u_avatar_url',
-    'users.verified        as u_verified',
-  ];
+  private commentSelect = ['comments.*'];
 
   async findById(id: string): Promise<Comment | null> {
     const db = getDatabase();
@@ -125,7 +119,6 @@ export class CommentModel {
     const db = getDatabase();
 
     let query = db(this.table)
-      .leftJoin('users', 'comments.user_id', 'users.id')
       .where({ 'comments.post_id': postId, 'comments.depth': 0 })
       .whereNull('comments.deleted_at')
       .orderBy('comments.created_at', 'asc')
@@ -136,11 +129,11 @@ export class CommentModel {
       query = query.where('comments.created_at', '>', new Date(cursor));
     }
 
-    const rows = await query as unknown as CommentRow[];
+    const rows = await query as unknown as Comment[];
 
     return Promise.all(
       rows.map(async (row) => {
-        const comment = toComment(row);
+        const comment = toComment(row as unknown as CommentRow);
         comment.replies_count = await this.countReplies(row.id);
         return comment;
       })
@@ -151,7 +144,6 @@ export class CommentModel {
     const db = getDatabase();
 
     const rows = await db(this.table)
-      .leftJoin('users', 'comments.user_id', 'users.id')
       .join('comment_closure', 'comments.id', 'comment_closure.descendant_id')
       .where({
         'comment_closure.ancestor_id': parentId,
@@ -160,11 +152,11 @@ export class CommentModel {
       .whereNull('comments.deleted_at')
       .orderBy('comments.created_at', 'asc')
       .limit(limit)
-      .select(this.commentSelect) as unknown as CommentRow[];
+      .select(this.commentSelect) as unknown as Comment[];
 
     return Promise.all(
       rows.map(async (row) => {
-        const comment = toComment(row);
+        const comment = toComment(row as unknown as CommentRow);
         comment.replies_count = await this.countReplies(row.id);
         return comment;
       })

@@ -6,6 +6,7 @@ import { CommentModel } from '../models/comment.model';
 import { LikeModel } from '../models/like.model';
 import { InteractionProducer } from '../kafka/producers/interaction.producer';
 import { CounterService } from './counter.service';
+import { fetchUserProfiles } from './userService.client';
 import {
   Comment,
   CommentWithReplies,
@@ -97,6 +98,8 @@ export class CommentService {
       ? items[items.length - 1].created_at.toISOString()
       : undefined;
 
+    await this.hydrateAuthors(items);
+
     return { comments: items, cursor: nextCursor, hasMore };
   }
 
@@ -110,7 +113,9 @@ export class CommentService {
     const parent = await this.commentModel.findById(parentId);
     if (!parent) throw new NotFoundError('Comment not found');
 
-    return this.commentModel.findReplies(parentId, limit);
+    const replies = await this.commentModel.findReplies(parentId, limit);
+    await this.hydrateAuthors(replies);
+    return replies;
   }
 
   /**
@@ -146,5 +151,29 @@ export class CommentService {
     const comment = await this.commentModel.findById(id);
     if (!comment) throw new NotFoundError('Comment not found');
     return comment;
+  }
+
+  /**
+   * Hydrate the `user` field of each comment by batch-fetching profiles
+   * from user-service. Mutates in place to avoid extra allocations.
+   */
+  private async hydrateAuthors(comments: CommentWithReplies[]): Promise<void> {
+    if (comments.length === 0) return;
+
+    const userIds = [...new Set(comments.map((c) => c.user_id))];
+    const profileMap = await fetchUserProfiles(userIds);
+
+    for (const comment of comments) {
+      const profile = profileMap.get(comment.user_id);
+      if (profile) {
+        (comment as any).user = {
+          id: profile.id,
+          username: profile.username,
+          display_name: profile.display_name ?? profile.username,
+          avatar_url: profile.avatar_url ?? null,
+          verified: profile.verified ?? false,
+        };
+      }
+    }
   }
 }
