@@ -3,6 +3,7 @@ import { getPersonalisedFeed } from '@/api/feed';
 import { FeedItem } from '@/types/feed.types';
 import { useInfiniteScroll } from './useInfiniteScroll';
 import { useAuth } from './useAuth';
+import { useSocket } from './useSocket';
 import { unwrapData } from '@/api/envelope';
 
 export const useFeed = (_initialParams?: Record<string, unknown>) => {
@@ -12,7 +13,9 @@ export const useFeed = (_initialParams?: Record<string, unknown>) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [newPostsBanner, setNewPostsBanner] = useState(0); // quanti nuovi post in attesa
   const { isAuthenticated } = useAuth();
+  const { socket } = useSocket();
 
   const cursorRef = useRef<string | null>(null);
 
@@ -77,6 +80,7 @@ export const useFeed = (_initialParams?: Record<string, unknown>) => {
 
   const refresh = useCallback(() => {
     setIsRefreshing(true);
+    setNewPostsBanner(0);
     cursorRef.current = null;
     setCursor(null);
     setHasMore(true);
@@ -97,7 +101,9 @@ export const useFeed = (_initialParams?: Record<string, unknown>) => {
     setPosts((prev) => [newItem, ...prev]);
   }, []);
 
-  // Ascolta l'evento globale per il refresh
+  // ── Listener CustomEvent browser (pubblicazione locale) ──────────────────────
+  // Quando l'utente corrente pubblica un post, Feed.tsx dispatcha
+  // window.CustomEvent('feed:refresh') e il feed si ricarica.
   useEffect(() => {
     const handleFeedRefresh = () => {
       cursorRef.current = null;
@@ -108,6 +114,42 @@ export const useFeed = (_initialParams?: Record<string, unknown>) => {
     window.addEventListener('feed:refresh', handleFeedRefresh);
     return () => window.removeEventListener('feed:refresh', handleFeedRefresh);
   }, [loadPosts]);
+
+  // ── Listener Socket.io (eventi real-time dal backend) ────────────────────────
+  useEffect(() => {
+    if (!socket) return;
+
+    /**
+     * feed:new_post — un utente seguito ha pubblicato un nuovo post.
+     *
+     * Strategia: mostriamo un banner "N nuovi post" invece di ricaricare
+     * silenziosamente, così l'utente non perde il suo scroll corrente.
+     * Cliccando il banner si chiama refresh() che riporta in cima.
+     */
+    const onNewPost = (_data: { postId: string; authorId: string; visibility: string; timestamp: string }) => {
+      setNewPostsBanner((prev) => prev + 1);
+    };
+
+    /**
+     * feed:refresh — l'utente ha appena seguito qualcuno.
+     * Ricarica il feed per includere i post recenti del nuovo seguito.
+     */
+    const onFeedRefresh = (_data: { reason: string; followedUserId?: string; timestamp: string }) => {
+      cursorRef.current = null;
+      setCursor(null);
+      setHasMore(true);
+      setNewPostsBanner(0);
+      loadPosts(true);
+    };
+
+    socket.on('feed:new_post', onNewPost);
+    socket.on('feed:refresh', onFeedRefresh);
+
+    return () => {
+      socket.off('feed:new_post', onNewPost);
+      socket.off('feed:refresh', onFeedRefresh);
+    };
+  }, [socket, loadPosts]);
 
   return {
     posts,
@@ -121,5 +163,9 @@ export const useFeed = (_initialParams?: Record<string, unknown>) => {
     removePost,
     updatePost,
     addPost,
+    /** Numero di nuovi post arrivati via WebSocket non ancora mostrati */
+    newPostsBanner,
+    /** Chiama refresh e azzera il banner */
+    dismissBanner: refresh,
   };
 };

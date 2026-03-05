@@ -7,6 +7,8 @@
  */
 
 import { NotificationService } from '../../services/notification.service';
+import { websocketService } from '../../services/websocket.service';
+import { fetchUserInfo } from '../../services/http.service';
 import { logger } from '../../utils/logger';
 import {
   FollowCreatedEvent,
@@ -49,22 +51,46 @@ export class UserEventConsumer {
     const followingId = (event.payload?.followingId || (event as any).followingId) as
       | string
       | undefined;
+    const followerId = event.userId; // chi ha premuto "segui"
+
     if (!followingId) return;
+    if (followingId === followerId) return; // self-follow edge case
 
-    // Non notificare se si segue se stessi (caso edge)
-    if (followingId === event.userId) return;
+    // Recupera info dell'attore per personalizzare la notifica
+    const actor = await fetchUserInfo(followerId);
+    const actorName = actor?.display_name || actor?.username || 'Qualcuno';
 
+    // ── 1. Notifica a chi viene seguito ─────────────────────────────────────
+    // "Mario ha iniziato a seguirti"
     await this.notificationService.notify({
-      recipientId: followingId,           // chi viene seguito riceve la notifica
-      actorId: event.userId,              // chi ha premuto "segui"
+      recipientId: followingId,
+      actorId: followerId,
       type: 'follow',
-      entityId: event.userId,
+      entityId: followerId,
       entityType: 'USER',
       title: 'Nuovo follower',
-      body: 'Qualcuno ha iniziato a seguirti',
+      body: `${actorName} ha iniziato a seguirti`,
     });
 
-    logger.debug('FollowCreated notification handled', { followingId, follower: event.userId });
+    // ── 2. feed:refresh a chi ha appena seguito ──────────────────────────────
+    // Il client del follower deve ricaricare il feed per includere i post
+    // recenti del nuovo utente seguito, senza aspettare il prossimo polling.
+    await websocketService.emitToUser(followerId, 'feed:refresh', {
+      reason: 'new_follow',
+      followedUserId: followingId,
+      timestamp: event.timestamp,
+    });
+
+    // ── 3. stories:refresh a chi ha appena seguito ───────────────────────────
+    // Se la home mostra le stories, le aggiorna per includere quelle del
+    // nuovo utente seguito.
+    await websocketService.emitToUser(followerId, 'stories:refresh', {
+      reason: 'new_follow',
+      followedUserId: followingId,
+      timestamp: event.timestamp,
+    });
+
+    logger.debug('FollowCreated handled', { followingId, followerId });
   }
 
   private async handleMessageSent(event: MessageSentEvent): Promise<void> {

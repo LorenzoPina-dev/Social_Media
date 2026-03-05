@@ -13,6 +13,25 @@ export interface ServerToClientEvents {
   'post:comment': (data: { postId: string; comment: Comment }) => void;
   'user:online': (userId: string) => void;
   'user:offline': (userId: string) => void;
+  /** Emesso quando un utente che segui pubblica un nuovo post */
+  'feed:new_post': (data: {
+    postId: string;
+    authorId: string;
+    visibility: string;
+    timestamp: string;
+  }) => void;
+  /** Emesso quando l'utente segue qualcuno: ricarica il feed */
+  'feed:refresh': (data: {
+    reason: 'new_follow' | string;
+    followedUserId?: string;
+    timestamp: string;
+  }) => void;
+  /** Emesso quando l'utente segue qualcuno: aggiorna il carosello stories */
+  'stories:refresh': (data: {
+    reason: 'new_follow' | string;
+    followedUserId?: string;
+    timestamp: string;
+  }) => void;
 }
 
 export interface ClientToServerEvents {

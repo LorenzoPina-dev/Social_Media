@@ -3,15 +3,28 @@
  *
  * Manages personalised feeds stored in Redis ZSETs.
  *
- * Key schema:   feed:{userId}           ZSET — score=rankingScore, member=postId
+ * Key schema:
+ *   feed:{userId}   ZSET — personal feed (own posts + followed users' posts)
+ *   feed:public     ZSET — global public feed (all PUBLIC posts from every user)
+ *
  * Score formula: timestampMs + engagementBoost
  *   where engagementBoost = (likeCount * 10 + commentCount * 20 + shareCount * 30)
  *   capped at 86_400_000 ms (1 day) to limit how much engagement can shift a post.
  *
  * Fan-out strategy:
- *   • Normal users  (<= CELEBRITY_THRESHOLD followers) → fan-out on WRITE.
+ *   • PRIVATE posts   → saved to store + added to author's own feed only (no fan-out).
+ *   • FOLLOWERS posts → fan-out on WRITE to followers + author.
+ *   • PUBLIC posts    → fan-out on WRITE to followers + author + added to feed:public.
  *   • Celebrity users (> CELEBRITY_THRESHOLD followers) → fan-out on READ
  *     (posts are NOT pushed to individual feeds; the read endpoint merges them).
+ *
+ * Read strategy:
+ *   getFeed merges feed:{userId} + feed:public in-process, deduplicates by postId
+ *   (keeping the highest score), and returns the unified sorted result.
+ *   This guarantees:
+ *     1. All of the viewer's own posts (any visibility).
+ *     2. FOLLOWERS posts from users the viewer follows.
+ *     3. PUBLIC posts from every user on the platform.
  */
 
 import { getRedisClient } from '../config/redis';
@@ -52,7 +65,42 @@ export class FeedService {
     return `feed:${userId}`;
   }
 
+  /** Global ZSET that holds all PUBLIC posts (every author). */
+  private publicFeedKey(): string {
+    return 'feed:public';
+  }
+
   // ── Write operations ─────────────────────────────────────────────────────────
+
+  /**
+   * Add a PUBLIC post to the global public feed ZSET.
+   * Called by post.consumer after saving a PUBLIC post.
+   */
+  async addPostToPublicFeed(postId: string, score: number): Promise<void> {
+    const redis = getRedisClient();
+    const key = this.publicFeedKey();
+
+    await redis.zadd(key, score, postId);
+
+    // Keep the global feed trimmed (allow 10× the per-user max size)
+    const size = await redis.zcard(key);
+    const globalMax = config.FEED.MAX_SIZE * 10;
+    if (size > globalMax) {
+      await redis.zremrangebyrank(key, 0, size - globalMax - 1);
+    }
+
+    await redis.expire(key, config.FEED.TTL_SECONDS);
+    logger.debug('FeedService: post added to public feed', { postId });
+  }
+
+  /**
+   * Remove a post from the global public feed (called on post_deleted).
+   */
+  async removePostFromPublicFeed(postId: string): Promise<void> {
+    const redis = getRedisClient();
+    await redis.zrem(this.publicFeedKey(), postId);
+    logger.debug('FeedService: post removed from public feed', { postId });
+  }
 
   /**
    * Add a post to a single user's feed.
@@ -208,10 +256,18 @@ export class FeedService {
   // ── Read operations ──────────────────────────────────────────────────────────
 
   /**
-   * Read a paginated slice of a user's feed.
+   * Read a paginated slice of a user's unified feed.
    *
-   * Uses ZREVRANGEBYSCORE so the highest-scored (most recent + most engaged)
-   * posts appear first.
+   * The unified feed is the in-process merge of:
+   *   • feed:{userId}  — personal ZSET (own posts of any visibility + followed users' posts)
+   *   • feed:public    — global ZSET   (PUBLIC posts from every user on the platform)
+   *
+   * After merging and deduplicating (highest score wins for duplicates) the result
+   * is sorted descending by score so the most recent / most engaged posts appear first.
+   *
+   * Cursor pagination works identically to the single-ZSET variant: the cursor
+   * encodes the score of the last returned item and is used as an exclusive upper
+   * bound on the next call.
    *
    * @param userId        Owner of the feed
    * @param cursor        Opaque cursor (base64 of the max score to exclude)
@@ -224,45 +280,60 @@ export class FeedService {
     limit: number,
   ): Promise<{ entries: FeedEntry[]; nextCursor: string | null; hasMore: boolean }> {
     const redis = getRedisClient();
-    const key = this.feedKey(userId);
+    const personalKey = this.feedKey(userId);
+    const publicKey = this.publicFeedKey();
 
     const safeLimit = Math.min(limit, config.FEED.MAX_PAGE_SIZE);
-    // We fetch one extra to determine if there are more pages
+    // Fetch one extra from each source so we can detect if there are more pages
+    // after the merge (in the worst case all items overlap, so safeLimit+1 each
+    // is sufficient to guarantee correct hasMore detection).
     const fetchCount = safeLimit + 1;
 
-    // Decode cursor: it contains the max score (exclusive) for this page
+    // Decode cursor: contains the max score (exclusive) for this page
     let maxScore = '+inf';
     if (cursor) {
       try {
         const decoded = Buffer.from(cursor, 'base64').toString('utf8');
         const parsed = parseFloat(decoded);
         if (!isNaN(parsed)) {
-          // Exclusive upper bound: subtract 1 to avoid returning the cursor item again
           maxScore = String(parsed - 1);
         }
       } catch {
-        // ignore invalid cursors
+        // ignore invalid cursors — start from the top
       }
     }
 
-    // Returns [member, score, member, score, …]
-    const raw: string[] = await redis.zrevrangebyscore(
-      key,
-      maxScore,
-      '-inf',
-      'WITHSCORES',
-      'LIMIT',
-      0,
-      fetchCount,
-    );
+    // Fetch from both ZSETs in parallel
+    const [personalRaw, publicRaw] = await Promise.all([
+      redis.zrevrangebyscore(personalKey, maxScore, '-inf', 'WITHSCORES', 'LIMIT', 0, fetchCount),
+      redis.zrevrangebyscore(publicKey,   maxScore, '-inf', 'WITHSCORES', 'LIMIT', 0, fetchCount),
+    ]);
 
-    const entries: FeedEntry[] = [];
-    for (let i = 0; i < raw.length; i += 2) {
-      entries.push({ postId: raw[i], score: parseFloat(raw[i + 1]) });
+    // Parse helper: [member, score, member, score, …] → FeedEntry[]
+    const parseRaw = (raw: string[]): FeedEntry[] => {
+      const out: FeedEntry[] = [];
+      for (let i = 0; i < raw.length; i += 2) {
+        out.push({ postId: raw[i], score: parseFloat(raw[i + 1]) });
+      }
+      return out;
+    };
+
+    // Merge & deduplicate — keep the highest score for posts present in both ZSETs
+    const scoreMap = new Map<string, number>();
+    for (const entry of [...parseRaw(personalRaw), ...parseRaw(publicRaw)]) {
+      const existing = scoreMap.get(entry.postId);
+      if (existing === undefined || entry.score > existing) {
+        scoreMap.set(entry.postId, entry.score);
+      }
     }
 
-    const hasMore = entries.length === fetchCount;
-    const page = hasMore ? entries.slice(0, safeLimit) : entries;
+    // Sort descending by score (newest / most-engaged first)
+    const sorted: FeedEntry[] = [...scoreMap.entries()]
+      .map(([postId, score]) => ({ postId, score }))
+      .sort((a, b) => b.score - a.score);
+
+    const hasMore = sorted.length > safeLimit;
+    const page = hasMore ? sorted.slice(0, safeLimit) : sorted;
 
     let nextCursor: string | null = null;
     if (hasMore && page.length > 0) {

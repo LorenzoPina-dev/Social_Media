@@ -78,3 +78,42 @@
   color: var(--text-secondary);
   font-size: var(--font-sm);
 }
+
+/* ── Banner nuovi post (real-time) ── */
+.newPostsBanner {
+  position: sticky;
+  top: 12px;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+  pointer-events: none;
+}
+
+.newPostsBannerBtn {
+  pointer-events: all;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--primary, #4f8ef7);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(79, 142, 247, 0.45);
+  transition: transform 0.15s, box-shadow 0.15s;
+  animation: slideDown 0.25s ease;
+}
+
+.newPostsBannerBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(79, 142, 247, 0.55);
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

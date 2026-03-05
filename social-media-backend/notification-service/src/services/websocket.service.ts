@@ -100,6 +100,17 @@ export class WebSocketService {
   }
 
   /**
+   * Emette un evento a più utenti in parallelo (fan-out batch).
+   * Gli utenti non connessi vengono silenziosamente ignorati.
+   */
+  async emitToUsers(userIds: string[], event: string, data: unknown): Promise<void> {
+    if (!io || userIds.length === 0) return;
+    await Promise.allSettled(
+      userIds.map((userId) => this.emitToUser(userId, event, data)),
+    );
+  }
+
+  /**
    * Controlla se un utente è connesso via WebSocket
    */
   async isUserOnline(userId: string): Promise<boolean> {

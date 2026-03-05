@@ -54,6 +54,39 @@ export async function fetchPostInfo(postId: string): Promise<PostInfo | null> {
 
 // ─── User Service ─────────────────────────────────────────────────────────────
 
+export interface FollowerListResponse {
+  followerIds: string[];
+  followerCount: number;
+}
+
+/**
+ * Recupera la lista degli ID dei follower di un utente da user-service.
+ * Usato per il fan-out real-time degli eventi di feed (post_created).
+ */
+export async function fetchFollowerIds(userId: string): Promise<FollowerListResponse> {
+  const url = `${USER_SERVICE_URL}/api/v1/users/${userId}/followers/ids`;
+  try {
+    const res = await fetch(url, {
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+
+    if (!res.ok) {
+      logger.warn('user-service returned non-OK for follower IDs', { userId, status: res.status });
+      return { followerIds: [], followerCount: 0 };
+    }
+
+    const body = (await res.json()) as { data: { followerIds: string[]; total: number } };
+    return {
+      followerIds: body.data.followerIds ?? [],
+      followerCount: body.data.total ?? 0,
+    };
+  } catch (err) {
+    logger.error('Failed to fetch follower IDs from user-service', { userId, err });
+    return { followerIds: [], followerCount: 0 };
+  }
+}
+
 export interface UserInfo {
   id: string;
   username: string;

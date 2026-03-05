@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar } from '@/components/common/Avatar/Avatar';
 import { getFollowing } from '@/api/users';
 import { unwrapItems } from '@/api/envelope';
 import { useAuth } from '@/hooks/useAuth';
+import { useSocket } from '@/hooks/useSocket';
 import { Profile } from '@/types/user.types';
 import styles from './Stories.module.css';
 
@@ -11,28 +12,39 @@ export const Stories: React.FC = () => {
   const [stories, setStories] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
+  const { socket } = useSocket();
 
-  useEffect(() => {
-    const loadStories = async () => {
-      if (!user?.id) {
-        setStories([]);
-        setIsLoading(false);
-        return;
-      }
+  const loadStories = useCallback(async () => {
+    if (!user?.id) {
+      setStories([]);
+      setIsLoading(false);
+      return;
+    }
 
-      try {
-        const response = await getFollowing(user.id, { limit: 20 });
-        const users = unwrapItems<Profile>(response.data).filter((u) => u.id !== user.id);
-        setStories(users);
-      } catch (error) {
-        console.error('Failed to load stories:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadStories();
+    try {
+      const response = await getFollowing(user.id, { limit: 20 });
+      const users = unwrapItems<Profile>(response.data).filter((u) => u.id !== user.id);
+      setStories(users);
+    } catch (error) {
+      console.error('Failed to load stories:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }, [user?.id]);
+
+  // Caricamento iniziale
+  useEffect(() => {
+    loadStories();
+  }, [loadStories]);
+
+  // Aggiornamento real-time: quando l'utente segue qualcuno il backend
+  // emette 'stories:refresh' e il carosello si aggiorna automaticamente.
+  useEffect(() => {
+    if (!socket) return;
+    const onRefresh = () => loadStories();
+    socket.on('stories:refresh', onRefresh);
+    return () => { socket.off('stories:refresh', onRefresh); };
+  }, [socket, loadStories]);
 
   if (isLoading) {
     return (

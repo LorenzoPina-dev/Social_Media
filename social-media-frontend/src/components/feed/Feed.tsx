@@ -20,6 +20,8 @@ export const Feed = () => {
     lastElementRef,
     refresh,
     removePost,
+    newPostsBanner,
+    dismissBanner,
   } = useFeed();
 
   const handleOpenComposer = () => {
@@ -36,6 +38,7 @@ export const Feed = () => {
   };
 
   if (error) {
+
     return (
       <div className={styles.error}>
         <p>Errore nel caricamento del feed</p>
@@ -48,6 +51,15 @@ export const Feed = () => {
 
   return (
     <div className={styles.feed}>
+      {/* ── Banner nuovi post real-time ── */}
+      {newPostsBanner > 0 && (
+        <div className={styles.newPostsBanner}>
+          <button className={styles.newPostsBannerBtn} onClick={dismissBanner}>
+            ↑ {newPostsBanner === 1 ? '1 nuovo post' : `${newPostsBanner} nuovi post`}
+          </button>
+        </div>
+      )}
+
       {/* ── Composer inline ── */}
       <div className={styles.composer} onClick={handleOpenComposer}>
         <Avatar

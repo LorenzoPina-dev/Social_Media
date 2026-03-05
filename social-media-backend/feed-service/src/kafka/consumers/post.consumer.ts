@@ -2,8 +2,12 @@
  * Post Events Consumer
  *
  * Responsibilities:
- *  1. Fan-out the post into follower feed ZSETs (existing logic)
- *  2. Persist full post data in Redis via StoreService (new — for hydration)
+ *  1. Persist full post data in Redis via StoreService (for hydration at read time).
+ *  2. Fan-out the post into the correct feed ZSETs according to visibility:
+ *
+ *     PRIVATE   → store + add to author's own feed only (no fan-out).
+ *     FOLLOWERS → store + fan-out to followers + author.
+ *     PUBLIC    → store + fan-out to followers + author + add to feed:public.
  */
 
 import { feedService } from '../../services/feed.service';
@@ -48,15 +52,10 @@ async function onPostCreated(event: KafkaEvent): Promise<void> {
   const postId = event.entityId;
   const authorId = event.userId;
 
-  if (payload.visibility === 'PRIVATE') {
-    logger.debug('Skipping private post fan-out', { postId });
-    return;
-  }
-
   const createdAtMs = new Date(event.timestamp).getTime();
   const score = feedService.calculateScore(createdAtMs);
 
-  // ── Step 1: persist post data for hydration ──────────────────────────────
+  // ── Step 1: persist post data for hydration (ALL visibilities) ──────────────
   await storeService.savePost({
     id: postId,
     userId: authorId,
@@ -71,17 +70,33 @@ async function onPostCreated(event: KafkaEvent): Promise<void> {
     createdAt: payload.created_at ?? event.timestamp,
   });
 
-  // ── Step 2: fan-out into follower feed ZSETs ──────────────────────────────
+  // ── Step 2: PRIVATE → add to author's own feed only, no fan-out ─────────────
+  if (payload.visibility === 'PRIVATE') {
+    await feedService.addPostToFeed(authorId, postId, score);
+    logger.debug('Private post added to author feed only', { postId, authorId });
+    return;
+  }
+
+  // ── Step 3: FOLLOWERS / PUBLIC → fan-out into follower feed ZSETs ───────────
   const { followerIds, followerCount } = await fetchFollowerIds(authorId);
 
   if (followerCount > config.FEED.CELEBRITY_THRESHOLD) {
+    // Celebrity: skip write fan-out, the read path merges on demand
     logger.info('Celebrity user — skipping write fan-out', { authorId, followerCount });
     await feedService.addPostToFeed(authorId, postId, score);
+    if (payload.visibility === 'PUBLIC') {
+      await feedService.addPostToPublicFeed(postId, score);
+    }
     return;
   }
 
   const recipients = [...new Set([...followerIds, authorId])];
   await feedService.fanOutPost(recipients, postId, score);
+
+  // ── Step 4: PUBLIC → also index in the global public feed ZSET ──────────────
+  if (payload.visibility === 'PUBLIC') {
+    await feedService.addPostToPublicFeed(postId, score);
+  }
 }
 
 async function onPostDeleted(event: KafkaEvent): Promise<void> {
@@ -89,10 +104,13 @@ async function onPostDeleted(event: KafkaEvent): Promise<void> {
   const postId = event.entityId;
   const authorId = payload.userId ?? event.userId;
 
-  // Remove from feed ZSETs
+  // Remove from personal feed ZSETs
   const { followerIds } = await fetchFollowerIds(authorId);
   const recipients = [...new Set([...followerIds, authorId])];
   await feedService.removePostFromFeeds(recipients, postId);
+
+  // Remove from global public feed (no-op if the post was not PUBLIC)
+  await feedService.removePostFromPublicFeed(postId);
 
   // Remove denormalized post data
   await storeService.deletePost(postId);
